@@ -1,1 +1,1 @@
-# BNU Sustainability Project
+# BNU Sustainability
