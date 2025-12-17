@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+
+@layer base {
+:root {
+    --background: 222.2 84% 96%;
+    --foreground: 222.2 84% 4%;
+}
+
+body {
+    @apply bg-slate-100 text-slate-800 antialiased;
+}
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/70 backdrop-blur shadow-lg hover:shadow-xl rounded-2xl transition-all border border-white/40;
+}
+
+  .page-grid {
+    @apply grid grid-cols-1 lg:grid-cols-3 gap-6;
+  }
+}
+

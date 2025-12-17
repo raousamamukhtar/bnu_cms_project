@@ -1,0 +1,77 @@
+import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+
+const baseLink =
+  'flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all';
+
+const activeClasses = 'bg-emerald-500 text-white shadow-lg';
+const inactiveClasses =
+  'text-slate-600 hover:text-emerald-600 hover:bg-emerald-50';
+
+export function Sidebar() {
+  const { user } = useAuth();
+
+
+  const role = user?.role;
+
+  const sections = {
+    admin: [
+      { to: '/admin/dashboard', label: 'Dashboard' },
+      { to: '/admin/data-entry', label: 'Data Entry' },
+    ],
+    coordinator: [
+      { to: '/coordinator/dashboard', label: 'Dashboard' },
+      { to: '/coordinator/data-entry', label: 'Data Entry' },
+    ],
+    management: [
+      { to: '/management/dashboard', label: 'Dashboard' },
+      { to: '/management/university-kpi', label: 'University KPIs' },
+      { to: '/management/department-trends', label: 'Department Trends' },
+      { to: '/management/department-resources', label: 'Department Resources' },
+    ],
+    hr: [
+      { to: '/hr/dashboard', label: 'Dashboard' },
+      { to: '/hr/data-entry', label: 'Data Entry' },
+    ],
+    marketing: [
+      { to: '/marketing/dashboard', label: 'Dashboard' },
+      { to: '/marketing/data-entry', label: 'Data Entry' },
+    ],
+  };
+
+  const links = sections[role] ?? [];
+
+  return (
+    <aside className="hidden md:flex md:flex-col w-64 h-screen sticky top-0 p-4 gap-4 bg-white/70 backdrop-blur border-r border-white/60 shadow-lg overflow-y-auto">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="h-9 w-9 rounded-2xl bg-emerald-500 flex items-center justify-center text-white font-semibold shadow-lg">
+          SD
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-slate-900">
+            Sustainability DMS
+          </p>
+          <p className="text-xs text-slate-500 capitalize">
+            {role ?? 'Guest'} Portal
+          </p>
+        </div>
+      </div>
+
+      <nav className="flex-1 flex flex-col gap-1">
+        {links.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            className={({ isActive }) =>
+              `${baseLink} ${isActive ? activeClasses : inactiveClasses}`
+            }
+          >
+            <span>{link.label}</span>
+          </NavLink>
+        ))}
+      </nav>
+    </aside>
+  );
+}
+
+
