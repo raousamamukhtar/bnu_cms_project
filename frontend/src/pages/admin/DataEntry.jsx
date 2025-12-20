@@ -22,7 +22,7 @@ export default function DataEntry() {
     paperReams: '',
     paperSheetsPerReam: '500',
     electricityUnits: '',
-    electricityPerUnitCost: '',
+    electricityTotalCost: '',
     waterUnits: '',
     waterPricePerUnit: '',
     wasteOrganic: '',
@@ -51,12 +51,12 @@ export default function DataEntry() {
 
   const steps = [
     { id: 1, title: 'Basic Info', description: '' },
-    { id: 2, title: 'Paper', description: 'Consumption' },
-    { id: 3, title: 'Electricity', description: 'Consumption & Cost' },
-    { id: 4, title: 'Water', description: 'Consumption Pattern' },
-    { id: 5, title: 'Waste', description: 'Generation Pattern' },
-    { id: 6, title: 'Generator', description: 'Fuel Usage' },
-    { id: 7, title: 'Travel', description: 'Business Travel' },
+    { id: 2, title: 'Paper', description: '' },
+    { id: 3, title: 'Electricity', description: '' },
+    { id: 4, title: 'Water', description: '' },
+    { id: 5, title: 'Waste', description: '' },
+    { id: 6, title: 'Generator', description: '' },
+    { id: 7, title: 'Travel', description: '' },
   ];
 
   const validateStep = (step) => {
@@ -82,10 +82,10 @@ export default function DataEntry() {
         }
         return true;
       case 3:
-        if (!formData.electricityUnits || !formData.electricityPerUnitCost) {
+        if (!formData.electricityUnits || !formData.electricityTotalCost) {
           const missing = [];
           if (!formData.electricityUnits) missing.push('Electricity Units');
-          if (!formData.electricityPerUnitCost) missing.push('Per Unit Rate');
+          if (!formData.electricityTotalCost) missing.push('Cost of Electricity');
           addToast(`Incomplete Electricity Data: Please fill in ${missing.join(' and ')}`, 'error');
           return false;
         }
@@ -142,20 +142,7 @@ export default function DataEntry() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
 
-  // Scroll to form when step changes (but not on initial mount)
-  const isInitialMount = useRef(true);
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    if (formRef.current) {
-      const timer = setTimeout(() => {
-        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [currentStep]);
+  // No auto-scroll on step change - keep scroll position fixed when clicking timeline steps
 
   const handleNext = () => {
     if (!validateStep(currentStep)) {
@@ -230,18 +217,17 @@ export default function DataEntry() {
       // Electricity Consumption
       electricity: {
         units: parseFloat(formData.electricityUnits) || 0,
-        perUnitRate: parseFloat(formData.electricityPerUnitCost) || 0, // Input: Per Unit Rate
-        totalCost: (() => {
-          // Formula: Units Consumed × Per Unit Rate
+        totalCost: parseFloat(formData.electricityTotalCost) || 0, // Input: Cost of Electricity
+        perUnitRate: (() => {
+          // Formula: Total Cost ÷ Total Units (calculated automatically)
           const units = parseFloat(formData.electricityUnits) || 0;
-          const ratePerUnit = parseFloat(formData.electricityPerUnitCost) || 0;
-          return units * ratePerUnit;
+          const totalCost = parseFloat(formData.electricityTotalCost) || 0;
+          return units > 0 ? Math.round(totalCost / units) : 0;
         })(),
         perUnitCost: (() => {
-          // Formula: Total Cost ÷ Total Units (includes taxes/fees)
+          // Formula: Total Cost ÷ Total Units (includes taxes/fees) - same as perUnitRate
           const units = parseFloat(formData.electricityUnits) || 0;
-          const ratePerUnit = parseFloat(formData.electricityPerUnitCost) || 0;
-          const totalCost = units * ratePerUnit;
+          const totalCost = parseFloat(formData.electricityTotalCost) || 0;
           return units > 0 ? Math.round(totalCost / units) : 0;
         })(),
         perCapitaConsumption: (() => {
@@ -318,7 +304,7 @@ export default function DataEntry() {
       paperReams: '',
       paperSheetsPerReam: '500',
       electricityUnits: '',
-      electricityPerUnitCost: '',
+      electricityTotalCost: '',
       waterUnits: '',
       waterPricePerUnit: '',
       wasteOrganic: '',
@@ -361,17 +347,17 @@ export default function DataEntry() {
         </div>
 
         {/* Timeline Stepper */}
-        <div className="bg-white rounded-xl shadow-lg border-2 border-emerald-100 p-6">
-          <div className="relative pb-20">
+        <div className="bg-white rounded-xl shadow-lg border-2 border-emerald-100 p-4 sm:p-5">
+          <div className="relative pb-14 sm:pb-16">
             {/* Top Row: Circles - Fixed Alignment */}
-            <div className="flex items-center justify-between relative py-2 overflow-x-auto">
+            <div className="flex items-center justify-between relative py-1 overflow-x-auto">
               {steps.map((step, index) => (
                 <div key={step.id} className="flex items-center flex-1 min-w-0 relative">
-                  <div className="flex items-center justify-center flex-1 min-w-0 relative z-10 py-2">
+                  <div className="flex items-center justify-center flex-1 min-w-0 relative z-10 py-1">
                     <button
                       type="button"
                       onClick={() => handleStepClick(step.id)}
-                      className={`flex items-center justify-center w-12 h-12 rounded-full font-bold text-sm transition-all duration-300 shrink-0 ${
+                      className={`flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full font-bold text-xs sm:text-sm transition-all duration-300 shrink-0 ${
                         currentStep === step.id
                           ? 'bg-emerald-600 text-white shadow-lg scale-110'
                           : currentStep > step.id
@@ -389,8 +375,8 @@ export default function DataEntry() {
                         currentStep > step.id ? 'bg-emerald-500' : 'bg-slate-200'
                       }`}
                       style={{
-                        width: `calc(100% - 48px)`,
-                        marginLeft: '24px'
+                        width: `calc(100% - 44px)`,
+                        marginLeft: '22px'
                       }}
                     ></div>
                   )}
@@ -398,7 +384,7 @@ export default function DataEntry() {
               ))}
             </div>
             {/* Bottom Row: Labels - Fixed Position Below Circles */}
-            <div className="flex items-start justify-between absolute top-20 left-0 right-0 overflow-x-auto">
+            <div className="flex items-start justify-between absolute top-12 sm:top-14 left-0 right-0 overflow-x-auto">
               {steps.map((step) => (
                 <div key={step.id} className="flex-1 min-w-0 px-1 text-center">
                   <p className={`text-xs font-semibold ${
@@ -418,10 +404,12 @@ export default function DataEntry() {
         </div>
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information Section */}
-          {currentStep === 1 && (
-          <>
+          {/* Single Card Container - Content Changes Based on Step */}
           <Card className="bg-white border-2 border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl overflow-hidden">
+            {/* Step Content - Changes Based on currentStep */}
+            {currentStep === 1 && (
+            <>
+            {/* Basic Information Section */}
             <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-5">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-lg bg-white/20 flex items-center justify-center shadow-md">
@@ -503,27 +491,12 @@ export default function DataEntry() {
                 </div>
               </div>
             </div>
-          </Card>
-          
-          {/* Navigation for Step 1 */}
-          <div className="flex gap-4 mt-6">
-            {currentStep < steps.length && (
-              <Button
-                type="button"
-                onClick={handleNext}
-                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
-              >
-                Next: {steps[1].title} →
-              </Button>
+            </>
             )}
-          </div>
-          </>
-          )}
 
-          {/* Paper Consumption Section */}
-          {currentStep === 2 && (
-          <>
-          <Card className="bg-white border-2 border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl overflow-hidden">
+            {/* Paper Consumption Section */}
+            {currentStep === 2 && (
+            <>
             <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-5">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-lg bg-white/20 flex items-center justify-center shadow-md">
@@ -614,35 +587,12 @@ export default function DataEntry() {
                 </div>
               </div>
             </div>
-          </Card>
-          
-          {/* Navigation for Step 2 */}
-          <div className="flex gap-4 mt-6">
-            <Button
-              type="button"
-              onClick={handlePrevious}
-              variant="secondary"
-              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
-            >
-              ← Previous
-            </Button>
-            {currentStep < steps.length && (
-              <Button
-                type="button"
-                onClick={handleNext}
-                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
-              >
-                Next: {steps[2].title} →
-              </Button>
+            </>
             )}
-          </div>
-          </>
-          )}
 
-          {/* Electricity Consumption Section */}
-          {currentStep === 3 && (
-          <>
-          <Card className="bg-white border-2 border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl overflow-hidden">
+            {/* Electricity Consumption Section */}
+            {currentStep === 3 && (
+            <>
             <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-5">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-lg bg-white/20 flex items-center justify-center shadow-md">
@@ -676,15 +626,15 @@ export default function DataEntry() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Per Unit Rate (PKR/KWH) <span className="text-red-500">*</span>
+                    Cost of Electricity (PKR) <span className="text-red-500">*</span>
                   </label>
                   <Input
                     type="number"
-                    value={formData.electricityPerUnitCost}
+                    value={formData.electricityTotalCost}
                     onChange={(e) =>
-                      setFormData({ ...formData, electricityPerUnitCost: e.target.value })
+                      setFormData({ ...formData, electricityTotalCost: e.target.value })
                     }
-                    placeholder="Enter rate per unit in PKR"
+                    placeholder="Enter total cost in PKR"
                     required
                     min="0"
                     step="0.01"
@@ -719,14 +669,13 @@ export default function DataEntry() {
                   </div>
                   <div className="bg-white rounded-lg p-4 border border-emerald-200 shadow-sm">
                     <label className="block text-xs font-medium text-slate-600 mb-2">
-                      Per Unit Cost
+                      Per Unit Rate (Calculated)
                     </label>
                     <div className="text-lg font-bold text-emerald-600">
                       {(() => {
-                        // Formula: Total Cost ÷ Total Units
+                        // Formula: Total Cost ÷ Total Units (calculated automatically)
                         const units = parseFloat(formData.electricityUnits) || 0;
-                        const ratePerUnit = parseFloat(formData.electricityPerUnitCost) || 0;
-                        const totalCost = units * ratePerUnit;
+                        const totalCost = parseFloat(formData.electricityTotalCost) || 0;
                         if (units > 0 && totalCost > 0) {
                           return Math.round(totalCost / units);
                         }
@@ -740,11 +689,10 @@ export default function DataEntry() {
                     </label>
                     <div className="text-lg font-bold text-emerald-600">
                       {(() => {
-                        // Formula: Units Consumed × Per Unit Rate
-                        const units = parseFloat(formData.electricityUnits) || 0;
-                        const ratePerUnit = parseFloat(formData.electricityPerUnitCost) || 0;
-                        if (units > 0 && ratePerUnit > 0) {
-                          return (units * ratePerUnit).toLocaleString('en-PK', { maximumFractionDigits: 0 });
+                        // Display the input value
+                        const totalCost = parseFloat(formData.electricityTotalCost) || 0;
+                        if (totalCost > 0) {
+                          return totalCost.toLocaleString('en-PK', { maximumFractionDigits: 0 });
                         }
                         return '0';
                       })()} <span className="text-xs font-normal text-slate-500">PKR</span>
@@ -753,35 +701,12 @@ export default function DataEntry() {
                 </div>
               </div>
             </div>
-          </Card>
-          
-          {/* Navigation for Step 3 */}
-          <div className="flex gap-4 mt-6">
-            <Button
-              type="button"
-              onClick={handlePrevious}
-              variant="secondary"
-              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
-            >
-              ← Previous
-            </Button>
-            {currentStep < steps.length && (
-              <Button
-                type="button"
-                onClick={handleNext}
-                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
-              >
-                Next: {steps[3].title} →
-              </Button>
+            </>
             )}
-          </div>
-          </>
-          )}
 
-          {/* Water Consumption Section */}
-          {currentStep === 4 && (
-          <>
-          <Card className="bg-white border-2 border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl overflow-hidden">
+            {/* Water Consumption Section */}
+            {currentStep === 4 && (
+            <>
             <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-5">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-lg bg-white/20 flex items-center justify-center shadow-md">
@@ -877,35 +802,12 @@ export default function DataEntry() {
                 </div>
               </div>
             </div>
-          </Card>
-          
-          {/* Navigation for Step 4 */}
-          <div className="flex gap-4 mt-6">
-            <Button
-              type="button"
-              onClick={handlePrevious}
-              variant="secondary"
-              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
-            >
-              ← Previous
-            </Button>
-            {currentStep < steps.length && (
-              <Button
-                type="button"
-                onClick={handleNext}
-                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
-              >
-                Next: {steps[4].title} →
-              </Button>
+            </>
             )}
-          </div>
-          </>
-          )}
 
-          {/* Waste Generation Section */}
-          {currentStep === 5 && (
-          <>
-          <Card className="bg-white border-2 border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl overflow-hidden">
+            {/* Waste Generation Section */}
+            {currentStep === 5 && (
+            <>
             <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-5">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-lg bg-white/20 flex items-center justify-center shadow-md">
@@ -1017,35 +919,12 @@ export default function DataEntry() {
                 </div>
               </div>
             </div>
-          </Card>
-          
-          {/* Navigation for Step 5 */}
-          <div className="flex gap-4 mt-6">
-            <Button
-              type="button"
-              onClick={handlePrevious}
-              variant="secondary"
-              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
-            >
-              ← Previous
-            </Button>
-            {currentStep < steps.length && (
-              <Button
-                type="button"
-                onClick={handleNext}
-                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
-              >
-                Next: {steps[5].title} →
-              </Button>
+            </>
             )}
-          </div>
-          </>
-          )}
 
-          {/* Generator Fuel Usage Section */}
-          {currentStep === 6 && (
-          <>
-          <Card className="bg-white border-2 border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl overflow-hidden">
+            {/* Generator Fuel Usage Section */}
+            {currentStep === 6 && (
+            <>
             <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-5">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-lg bg-white/20 flex items-center justify-center shadow-md">
@@ -1101,35 +980,12 @@ export default function DataEntry() {
                 </div>
               </div>
             </div>
-          </Card>
-          
-          {/* Navigation for Step 6 */}
-          <div className="flex gap-4 mt-6">
-            <Button
-              type="button"
-              onClick={handlePrevious}
-              variant="secondary"
-              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
-            >
-              ← Previous
-            </Button>
-            {currentStep < steps.length && (
-              <Button
-                type="button"
-                onClick={handleNext}
-                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
-              >
-                Next: {steps[6].title} →
-              </Button>
+            </>
             )}
-          </div>
-          </>
-          )}
 
-          {/* Business Travel Section */}
-          {currentStep === 7 && (
-          <>
-          <Card className="bg-white border-2 border-emerald-100 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl overflow-hidden">
+            {/* Business Travel Section */}
+            {currentStep === 7 && (
+            <>
             <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-5">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-lg bg-white/20 flex items-center justify-center shadow-md">
@@ -1185,9 +1041,26 @@ export default function DataEntry() {
                 </div>
               </div>
             </div>
+            </>
+            )}
           </Card>
 
-          {/* Navigation for Step 7 (Final Step) */}
+          {/* Navigation Buttons - Outside Card, Changes Based on Step */}
+          {currentStep === 1 && (
+          <div className="flex gap-4 mt-6">
+            {currentStep < steps.length && (
+              <Button
+                type="button"
+                onClick={handleNext}
+                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
+              >
+                Next: {steps[1].title} →
+              </Button>
+            )}
+          </div>
+          )}
+
+          {currentStep === 2 && (
           <div className="flex gap-4 mt-6">
             <Button
               type="button"
@@ -1197,22 +1070,131 @@ export default function DataEntry() {
             >
               ← Previous
             </Button>
-              <Button
-                type="submit"
-              className="flex-1 w-full py-3.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
-              >
-              ✓ Submit Monthly Data
-              </Button>
+            {currentStep < steps.length && (
               <Button
                 type="button"
-                variant="secondary"
-                onClick={() => navigate('/admin/dashboard')}
-              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
+                onClick={handleNext}
+                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
               >
-                Cancel
+                Next: {steps[2].title} →
               </Button>
-            </div>
-          </>
+            )}
+          </div>
+          )}
+
+          {currentStep === 3 && (
+          <div className="flex gap-4 mt-6">
+            <Button
+              type="button"
+              onClick={handlePrevious}
+              variant="secondary"
+              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
+            >
+              ← Previous
+            </Button>
+            {currentStep < steps.length && (
+              <Button
+                type="button"
+                onClick={handleNext}
+                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
+              >
+                Next: {steps[3].title} →
+              </Button>
+            )}
+          </div>
+          )}
+
+          {currentStep === 4 && (
+          <div className="flex gap-4 mt-6">
+            <Button
+              type="button"
+              onClick={handlePrevious}
+              variant="secondary"
+              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
+            >
+              ← Previous
+            </Button>
+            {currentStep < steps.length && (
+              <Button
+                type="button"
+                onClick={handleNext}
+                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
+              >
+                Next: {steps[4].title} →
+              </Button>
+            )}
+          </div>
+          )}
+
+          {currentStep === 5 && (
+          <div className="flex gap-4 mt-6">
+            <Button
+              type="button"
+              onClick={handlePrevious}
+              variant="secondary"
+              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
+            >
+              ← Previous
+            </Button>
+            {currentStep < steps.length && (
+              <Button
+                type="button"
+                onClick={handleNext}
+                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
+              >
+                Next: {steps[5].title} →
+              </Button>
+            )}
+          </div>
+          )}
+
+          {currentStep === 6 && (
+          <div className="flex gap-4 mt-6">
+            <Button
+              type="button"
+              onClick={handlePrevious}
+              variant="secondary"
+              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
+            >
+              ← Previous
+            </Button>
+            {currentStep < steps.length && (
+              <Button
+                type="button"
+                onClick={handleNext}
+                className="flex-1 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
+              >
+                Next: {steps[6].title} →
+              </Button>
+            )}
+          </div>
+          )}
+
+          {currentStep === 7 && (
+          <div className="flex gap-4 mt-6">
+            <Button
+              type="button"
+              onClick={handlePrevious}
+              variant="secondary"
+              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
+            >
+              ← Previous
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 w-full py-3.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all"
+            >
+              ✓ Submit Monthly Data
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => navigate('/admin/dashboard')}
+              className="px-6 py-3.5 border-2 border-slate-300 hover:border-slate-400 font-medium"
+            >
+              Cancel
+            </Button>
+          </div>
           )}
         </form>
       </div>

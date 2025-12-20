@@ -1,79 +1,126 @@
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-} from 'recharts';
-import { StatCard, Card } from '../../components/ui/Card';
-import { Table } from '../../components/ui/Table';
+import { useState, useMemo } from 'react';
+import { Card } from '../../components/ui/Card';
 import { useData } from '../../context/DataContext';
+import { Select } from '../../components/ui/Select';
+import { getDefaultYear } from '../../utils/formatters';
+import { useYearlyDataAggregation } from '../../hooks/useYearlyDataAggregation';
+import { useAvailableYears } from '../../hooks/useAvailableYears';
+import { transformMonthlyDataForChart } from '../../utils/dataTransformers';
+import { DataViewHeader } from '../../components/management/DataViewHeader';
+import { DetailedMetricsGrid } from '../../components/management/DetailedMetricsGrid';
+import { WasteSegregationSection } from '../../components/management/WasteSegregationSection';
+import { YearlyChartsSection } from '../../components/management/YearlyChartsSection';
 
+const VIEW_TYPES = {
+  MONTHLY: 'monthly',
+  YEARLY: 'yearly',
+};
+
+const DEFAULT_MONTH = 'December';
+
+/**
+ * Management Dashboard Component
+ * Main dashboard for management role displaying environmental data analysis
+ */
 export default function ManagementDashboard() {
-  const { departmentRanking, kpiTargets } = useData();
+  const { monthlyAdminData } = useData();
+  const [viewType, setViewType] = useState(VIEW_TYPES.MONTHLY);
+  const [selectedMonth, setSelectedMonth] = useState(DEFAULT_MONTH);
+  const [selectedYear, setSelectedYear] = useState(getDefaultYear());
 
-  const stats = kpiTargets.map((target) => ({
-    label: `${target.kpi} target`,
-    value: `${target.current}/${target.target}`,
-    trend:
-      Math.round(((target.target - target.current) / target.target) * 100 * -1) ||
-      0,
-    trendLabel: 'progress',
-  }));
+  const availableYears = useAvailableYears(monthlyAdminData);
+  const yearlyData = useYearlyDataAggregation(monthlyAdminData, selectedYear);
 
-  const columns = [
-    { header: 'Department', accessor: 'department' },
-    { header: 'Consumption Score', accessor: 'consumptionScore' },
-    { header: 'YoY Improvement', accessor: 'yoyImprovement' },
-    { header: 'Renewable Share %', accessor: 'renewableShare' },
-  ];
+  // Filter data by selected year for monthly view
+  const filteredYearlyData = useMemo(() => {
+    return monthlyAdminData.filter((entry) => entry.period.year === selectedYear);
+  }, [monthlyAdminData, selectedYear]);
+
+  // Get month options for selector
+  const monthOptions = useMemo(() => {
+    return [
+      { label: 'Select Month', value: '' },
+      ...filteredYearlyData.map((entry) => ({
+        label: entry.period.month,
+        value: entry.period.month,
+      })),
+    ];
+  }, [filteredYearlyData]);
+
+  // Get year options for selector
+  const yearOptions = useMemo(() => {
+    return [
+      { label: 'Select Year', value: '' },
+      ...availableYears.map((year) => ({
+        label: year,
+        value: year,
+      })),
+    ];
+  }, [availableYears]);
+
+  // Get selected data based on view type
+  const selectedData = useMemo(() => {
+    if (viewType === VIEW_TYPES.YEARLY) {
+      return yearlyData;
+    }
+    return monthlyAdminData.find(
+      (entry) =>
+        entry.period.month === selectedMonth &&
+        entry.period.year === selectedYear
+    );
+  }, [monthlyAdminData, selectedMonth, selectedYear, viewType, yearlyData]);
+
+  // Prepare yearly chart data
+  const yearlyChartData = useMemo(() => {
+    return transformMonthlyDataForChart(filteredYearlyData);
+  }, [filteredYearlyData]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs uppercase tracking-[0.25em] text-emerald-500">
-          Management (View-Only)
-        </p>
-        <h2 className="text-2xl font-semibold text-slate-900">
-          University Snapshot
-        </h2>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          View-only access to all dashboards and reports
-        </p>
+    <div className="w-full bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 space-y-6">
+        <DataViewHeader
+          viewType={viewType}
+          onViewTypeChange={setViewType}
+          selectedMonth={selectedMonth}
+          onMonthChange={setSelectedMonth}
+          monthOptions={monthOptions}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+          yearOptions={yearOptions}
+          showMonthSelector={viewType === VIEW_TYPES.MONTHLY}
+          showYearSelector={viewType === VIEW_TYPES.YEARLY}
+        />
+
+        {selectedData ? (
+          <>
+            <Card>
+              <DetailedMetricsGrid data={selectedData} viewType={viewType} />
+            </Card>
+
+            {viewType === VIEW_TYPES.YEARLY && (
+              <>
+                <WasteSegregationSection
+                  year={selectedData.period.year}
+                  wasteData={selectedData.waste}
+                />
+                <YearlyChartsSection
+                  year={selectedData.period.year}
+                  chartData={yearlyChartData}
+                />
+              </>
+            )}
+          </>
+        ) : (
+          <Card>
+            <div className="text-center py-12">
+              <p className="text-slate-500 text-lg">
+                No data available for the selected{' '}
+                {viewType === VIEW_TYPES.YEARLY ? 'year' : 'month'}
+              </p>
+            </div>
+          </Card>
+        )}
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <Card>
-          <h3 className="text-base font-semibold text-slate-900 mb-4">
-            Consumption Ranking
-          </h3>
-          <Table columns={columns} data={departmentRanking} />
-        </Card>
-
-        <Card>
-          <h3 className="text-base font-semibold text-slate-900 mb-4">
-            YoY Comparison
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={departmentRanking.slice(0, 6)}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="department" />
-              <Tooltip />
-              <Bar dataKey="yoyImprovement" fill="#0ea5e9" radius={12} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      </div>
-
     </div>
   );
 }
-
-

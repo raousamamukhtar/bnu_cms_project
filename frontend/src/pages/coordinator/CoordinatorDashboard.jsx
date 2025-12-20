@@ -133,8 +133,9 @@ export default function CoordinatorDashboard() {
             </p>
           </div>
           <Button 
+            variant="secondary"
             onClick={() => navigate('/coordinator/data-entry')}
-            className="whitespace-nowrap text-black bg-white/90 hover:bg-white  font-semibold shadow-md"
+            className="whitespace-nowrap bg-white/90 hover:bg-white text-slate-900 font-semibold shadow-md border-0"
           >
             New Data Entry
           </Button>

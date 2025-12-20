@@ -5,9 +5,6 @@ import CoordinatorDashboard from '../pages/coordinator/CoordinatorDashboard';
 import DataEntry from '../pages/coordinator/DataEntry';
 import SubmissionHistory from '../pages/coordinator/SubmissionHistory';
 import ManagementDashboard from '../pages/management/ManagementDashboard';
-import UniversityKPI from '../pages/management/UniversityKPI';
-import DepartmentTrends from '../pages/management/DepartmentTrends';
-import DepartmentResources from '../pages/management/DepartmentResources';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminDataEntry from '../pages/admin/DataEntry';
 import HRDashboard from '../pages/hr/HRDashboard';
@@ -54,9 +51,6 @@ export function AppRoutes() {
 
           <Route element={<RoleRoute roles={['management']} />}>
             <Route path="management/dashboard" element={<ManagementDashboard />} />
-            <Route path="management/university-kpi" element={<UniversityKPI />} />
-            <Route path="management/department-trends" element={<DepartmentTrends />} />
-            <Route path="management/department-resources" element={<DepartmentResources />} />
           </Route>
 
           <Route element={<RoleRoute roles={['hr']} />}>

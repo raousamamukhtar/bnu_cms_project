@@ -12,7 +12,7 @@ const roleOptions = [
   { label: 'Coordinator', value: 'coordinator' },
   { label: 'Management', value: 'management' },
   { label: 'HR', value: 'hr' },
-  { label: 'Marketing Head', value: 'marketing' },
+  { label: 'Marketing ', value: 'marketing' },
 ];
 
 export default function Login() {

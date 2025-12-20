@@ -25,9 +25,6 @@ export function Sidebar() {
     ],
     management: [
       { to: '/management/dashboard', label: 'Dashboard' },
-      { to: '/management/university-kpi', label: 'University KPIs' },
-      { to: '/management/department-trends', label: 'Department Trends' },
-      { to: '/management/department-resources', label: 'Department Resources' },
     ],
     hr: [
       { to: '/hr/dashboard', label: 'Dashboard' },
