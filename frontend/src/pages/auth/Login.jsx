@@ -10,7 +10,7 @@ import { loginSchema } from '../../utils/validation';
 const roleOptions = [
   { label: 'Admin', value: 'admin' },
   { label: 'Coordinator', value: 'coordinator' },
-  { label: 'Management', value: 'management' },
+  { label: 'Management ', value: 'management' },
   { label: 'HR', value: 'hr' },
   { label: 'Marketing ', value: 'marketing' },
 ];
