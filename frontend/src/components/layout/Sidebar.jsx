@@ -18,6 +18,7 @@ export function Sidebar() {
     admin: [
       { to: '/admin/dashboard', label: 'Dashboard' },
       { to: '/admin/data-entry', label: 'Data Entry' },
+      { to: '/admin/history', label: 'History' },
     ],
     coordinator: [
       { to: '/coordinator/dashboard', label: 'Dashboard' },
@@ -33,6 +34,28 @@ export function Sidebar() {
     marketing: [
       { to: '/marketing/dashboard', label: 'Dashboard' },
       { to: '/marketing/data-entry', label: 'Data Entry' },
+      { to: '/marketing/history', label: 'History' },
+    ],
+    carbon_accountant: [
+      { to: '/carbon-accountant/dashboard', label: 'Dashboard' },
+      { to: '/carbon-accountant/data-entry', label: 'Data Entry' },
+      { to: '/carbon-accountant/history', label: 'History' },
+    ],
+    super_admin: [
+      { to: '/admin/dashboard', label: 'Admin Dashboard' },
+      { to: '/admin/data-entry', label: 'Admin Data Entry' },
+      { to: '/admin/history', label: 'Admin History' },
+      { to: '/coordinator/dashboard', label: 'Coordinator Dashboard' },
+      { to: '/coordinator/data-entry', label: 'Coordinator Data Entry' },
+      { to: '/management/dashboard', label: 'Management Dashboard' },
+      { to: '/hr/dashboard', label: 'HR Dashboard' },
+      { to: '/hr/data-entry', label: 'HR Data Entry' },
+      { to: '/marketing/dashboard', label: 'Marketing Dashboard' },
+      { to: '/marketing/data-entry', label: 'Marketing Data Entry' },
+      { to: '/marketing/history', label: 'Marketing History' },
+      { to: '/carbon-accountant/dashboard', label: 'Carbon Accountant Dashboard' },
+      { to: '/carbon-accountant/data-entry', label: 'Carbon Accountant Data Entry' },
+      { to: '/carbon-accountant/history', label: 'Carbon Accountant History' },
     ],
   };
 

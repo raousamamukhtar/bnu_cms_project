@@ -11,6 +11,8 @@ const ROLE_REDIRECT = {
   management: '/management/dashboard',
   hr: '/hr/dashboard',
   marketing: '/marketing/dashboard',
+  carbon_accountant: '/carbon-accountant/dashboard',
+  super_admin: '/admin/dashboard',
 };
 
 export function AuthProvider({ children }) {
@@ -28,20 +30,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (username, role) => {
+    if (!username || !role) {
+      throw new Error('Username and role are required');
+    }
+
     const normalizedName = username.trim().toLowerCase();
     const matchedUser = usersSeed.find(
       (u) =>
         u.role === role &&
         u.name.trim().toLowerCase() === normalizedName,
     );
-
-    if (role === 'coordinator') {
-      if (!matchedUser || !matchedUser.department) {
-        throw new Error(
-          'Coordinator not linked to any department. Please contact admin.',
-        );
-      }
-    }
 
     const fakeToken = `fake-jwt-${Date.now()}`;
     const authUser = {
@@ -51,9 +49,14 @@ export function AuthProvider({ children }) {
       department: matchedUser?.department,
       email: matchedUser?.email,
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
-    setUser(authUser);
-    return ROLE_REDIRECT[role] ?? '/';
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+      setUser(authUser);
+      return ROLE_REDIRECT[role] ?? '/';
+    } catch (error) {
+      throw new Error('Failed to save authentication data. Please try again.');
+    }
   };
 
   const logout = () => {

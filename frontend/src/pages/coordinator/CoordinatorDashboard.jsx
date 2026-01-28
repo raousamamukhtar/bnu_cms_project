@@ -1,118 +1,130 @@
-import {
-  Line,
-  LineChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Legend,
-} from 'recharts';
+import { useState, useEffect, useMemo } from 'react';
 import { StatCard, Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
-import { formatNumber } from '../../utils/formatters';
 import { useNavigate } from 'react-router-dom';
+import { Table } from '../../components/ui/Table';
 
-// Mock data - in real app, this would come from API
-const mockCarbonData = [
-  { month: 'Jan', carbonFootprint: 45.2 },
-  { month: 'Feb', carbonFootprint: 42.8 },
-  { month: 'Mar', carbonFootprint: 48.5 },
-  { month: 'Apr', carbonFootprint: 44.1 },
-  { month: 'May', carbonFootprint: 46.3 },
-  { month: 'Jun', carbonFootprint: 43.7 },
-];
+/**
+ * Load all coordinator events from localStorage
+ * @returns {Array} Array of event entries
+ */
+const loadCoordinatorEvents = () => {
+  const events = [];
+  const monthOrder = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
-const mockAQIData = [
-  { month: 'Jan', aqi: 65, pm25: 42, pm10: 58 },
-  { month: 'Feb', aqi: 58, pm25: 38, pm10: 52 },
-  { month: 'Mar', aqi: 72, pm25: 48, pm10: 65 },
-  { month: 'Apr', aqi: 68, pm25: 45, pm10: 61 },
-  { month: 'May', aqi: 70, pm25: 46, pm10: 63 },
-  { month: 'Jun', aqi: 64, pm25: 41, pm10: 57 },
-];
-
-const mockEventsLog = [
-  {
-    id: 'evt-001',
-    event: 'Carbon Footprint Assessment',
-    date: '2025-10-15',
-    type: 'Assessment',
-    status: 'Completed',
-  },
-  {
-    id: 'evt-002',
-    event: 'AQI Monitoring Setup',
-    date: '2025-10-20',
-    type: 'Setup',
-    status: 'Completed',
-  },
-  {
-    id: 'evt-003',
-    event: 'Monthly Carbon Review',
-    date: '2025-11-01',
-    type: 'Review',
-    status: 'Scheduled',
-  },
-  {
-    id: 'evt-004',
-    event: 'AQI Data Collection',
-    date: '2025-11-05',
-    type: 'Data Collection',
-    status: 'In Progress',
-  },
-];
+  // Scan localStorage for all coordinator event entries
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('coordinator_events_')) {
+      const parts = key.replace('coordinator_events_', '').split('_');
+      if (parts.length >= 2) {
+        const year = parts[0];
+        const month = parts[1];
+        
+        try {
+          const entryData = localStorage.getItem(key);
+          if (entryData) {
+            const data = JSON.parse(entryData);
+            if (Array.isArray(data.events)) {
+              data.events.forEach((event, index) => {
+                if (event.name || event.type || event.date) {
+                  events.push({
+                    id: `${year}_${month}_${index}`,
+                    year,
+                    month,
+                    ...event,
+                    submittedAt: data.submittedAt || new Date().toISOString(),
+                  });
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing coordinator event:', e);
+        }
+      }
+    }
+  }
+  
+  // Sort by year (descending) then by month, then by date
+  events.sort((a, b) => {
+    if (b.year !== a.year) {
+      return parseInt(b.year) - parseInt(a.year);
+    }
+    if (b.month !== a.month) {
+      return monthOrder.indexOf(b.month) - monthOrder.indexOf(a.month);
+    }
+    return new Date(b.date || 0) - new Date(a.date || 0);
+  });
+  
+  return events;
+};
 
 export default function CoordinatorDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const myDept = user?.department;
 
-  // Calculate stats
-  const avgCarbon =
-    mockCarbonData.length > 0
-      ? formatNumber(
-          mockCarbonData.reduce((acc, row) => acc + row.carbonFootprint, 0) /
-            mockCarbonData.length,
-        )
-      : '–';
+  // Load events from localStorage
+  useEffect(() => {
+    const loadEvents = () => {
+      try {
+        setLoading(true);
+        const loadedEvents = loadCoordinatorEvents();
+        setEvents(loadedEvents);
+      } catch (error) {
+        console.error('Error loading events:', error);
+        setEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const avgAQI =
-    mockAQIData.length > 0
-      ? formatNumber(
-          mockAQIData.reduce((acc, row) => acc + row.aqi, 0) /
-            mockAQIData.length,
-        )
-      : '–';
+    loadEvents();
+  }, []);
+
+  // Calculate stats
+  const totalEvents = events.length;
+  const completedEvents = events.filter((e) => e.status === 'Completed').length;
+  const pendingEvents = events.filter((e) => e.status !== 'Completed' && e.status !== 'In Progress').length;
+  const inProgressEvents = events.filter((e) => e.status === 'In Progress').length;
+
+  // Get recent events (last 10)
+  const recentEvents = useMemo(() => {
+    return events.slice(0, 10);
+  }, [events]);
 
   const stats = [
     {
-      label: 'Avg Carbon Footprint (tCO₂e)',
-      value: avgCarbon,
-      trend: -2.5,
-      trendLabel: 'vs last period',
-    },
-    {
-      label: 'Avg AQI',
-      value: avgAQI,
-      trend: -3,
-      trendLabel: 'vs last period',
-    },
-    {
       label: 'Total Events',
-      value: mockEventsLog.length,
-      trend: 2,
-      trendLabel: 'this month',
+      value: totalEvents,
+      trend: totalEvents,
+      trendLabel: 'all time',
+    },
+    {
+      label: 'Completed Events',
+      value: completedEvents,
+      trend: completedEvents,
+      trendLabel: 'completed',
+    },
+    {
+      label: 'In Progress',
+      value: inProgressEvents,
+      trend: inProgressEvents,
+      trendLabel: 'active',
     },
     {
       label: 'Pending Events',
-      value: mockEventsLog.filter((e) => e.status !== 'Completed').length,
-      trend: 1,
-      trendLabel: 'active',
+      value: pendingEvents,
+      trend: pendingEvents,
+      trendLabel: 'pending',
     },
   ];
 
@@ -129,7 +141,7 @@ export default function CoordinatorDashboard() {
               Coordinator Dashboard
             </h2>
             <p className="text-sm text-emerald-50">
-              Monitor Carbon Data, AQI Data, and Events Log
+              Manage and monitor department events and activities
             </p>
           </div>
           <Button 
@@ -149,75 +161,82 @@ export default function CoordinatorDashboard() {
         ))}
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Carbon Data Chart */}
-        <Card className="overflow-hidden">
-          <div className="p-4 sm:p-5 pb-0">
-            <h3 className="text-sm sm:text-base font-semibold text-slate-900">
-              Carbon Data
-            </h3>
-            <p className="text-xs text-slate-500 mt-1 break-words">
-              Monthly carbon footprint trends for {myDept || 'department'}
-            </p>
-          </div>
-          <div className="p-4 sm:p-5">
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockCarbonData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip 
-                  contentStyle={{ fontSize: '12px' }}
-                  wrapperStyle={{ fontSize: '12px' }}
-                />
-                <Legend 
-                  wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="carbonFootprint"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  name="Carbon Footprint (tCO₂e)"
-                  dot={{ r: 3 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        {/* AQI Data Chart */}
-        <Card className="overflow-hidden">
-          <div className="p-4 sm:p-5 pb-0">
-            <h3 className="text-sm sm:text-base font-semibold text-slate-900">
-              AQI Data
-            </h3>
-            <p className="text-xs text-slate-500 mt-1 break-words">
-              Air Quality Index and particulate matter levels
-            </p>
-          </div>
-          <div className="p-4 sm:p-5">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockAQIData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip 
-                  contentStyle={{ fontSize: '12px' }}
-                  wrapperStyle={{ fontSize: '12px' }}
-                />
-                <Legend 
-                  wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
-                />
-                <Bar dataKey="aqi" fill="#0ea5e9" name="AQI" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="pm25" fill="#6366f1" name="PM2.5" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="pm10" fill="#f97316" name="PM10" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      </div>
+      {/* Events Table */}
+      <Card className="overflow-hidden">
+        <div className="p-4 sm:p-5 pb-0">
+          <h3 className="text-sm sm:text-base font-semibold text-slate-900">
+            Recent Events
+          </h3>
+          <p className="text-xs text-slate-500 mt-1 break-words">
+            Latest events and activities for {myDept || 'department'}
+          </p>
+        </div>
+        <div className="p-4 sm:p-5">
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-slate-500">Loading events...</p>
+            </div>
+          ) : recentEvents.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-slate-500 text-lg mb-4">No events recorded yet</p>
+              <Button
+                variant="primary"
+                onClick={() => navigate('/coordinator/data-entry')}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                Add Your First Event
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Event Name</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Type</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Date</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Period</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {recentEvents.map((event) => (
+                    <tr key={event.id} className="hover:bg-slate-50">
+                      <td className="py-3 px-4 text-sm text-slate-900 font-medium">
+                        {event.name || 'Untitled Event'}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-slate-600">
+                        {event.type || 'N/A'}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-slate-600">
+                        {event.date ? new Date(event.date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        }) : 'N/A'}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-slate-600">
+                        {event.month} {event.year}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          event.status === 'Completed'
+                            ? 'bg-green-100 text-green-800'
+                            : event.status === 'In Progress'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {event.status || 'Pending'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Card>
 
       
     </div>

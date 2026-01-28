@@ -9,15 +9,33 @@ export function Navbar() {
   const [apiStatus, setApiStatus] = useState('checking');
 
   useEffect(() => {
-    pingServer().then((result) => setApiStatus(result.status ?? 'online'));
+    pingServer()
+      .then((result) => {
+        setApiStatus(result.status ?? 'demo');
+      })
+      .catch((error) => {
+        console.warn('Server ping failed:', error.message);
+        setApiStatus('offline');
+      });
   }, []);
 
   const statusColor =
     apiStatus === 'online'
       ? 'bg-emerald-500'
-      : apiStatus === 'offline'
-        ? 'bg-red-500'
-        : 'bg-amber-500';
+      : apiStatus === 'demo'
+        ? 'bg-blue-500'
+        : apiStatus === 'offline'
+          ? 'bg-red-500'
+          : 'bg-amber-500';
+
+  const statusLabel =
+    apiStatus === 'demo'
+      ? 'Demo Mode'
+      : apiStatus === 'online'
+        ? 'API Online'
+        : apiStatus === 'offline'
+          ? 'API Offline'
+          : 'API Checking';
 
   const handleLogout = () => {
     logout();
@@ -34,7 +52,7 @@ export function Navbar() {
           <span>Track and visualize campus sustainability performance</span>
           <span className="flex items-center gap-1">
             <span className={`h-2.5 w-2.5 rounded-full ${statusColor}`} />
-            API {apiStatus}
+            {statusLabel}
           </span>
         </div>
       </div>

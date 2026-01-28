@@ -242,6 +242,18 @@ export const users = [
     role: 'hr',
     email: 'hr@sdms.edu',
   },
+  {
+    id: 'user-013',
+    name: 'Carbon Accountant',
+    role: 'carbon_accountant',
+    email: 'carbon@sdms.edu',
+  },
+  {
+    id: 'user-014',
+    name: 'Super Admin',
+    role: 'super_admin',
+    email: 'superadmin@sdms.edu',
+  },
 ];
 
 export const departmentRanking = departments.map((department, idx) => ({

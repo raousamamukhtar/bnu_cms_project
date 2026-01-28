@@ -15,113 +15,72 @@ import { Card, StatCard } from '../../components/ui/Card';
 import { ChartWrapper } from '../../components/charts/ChartWrapper';
 import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
-import { useData } from '../../context/DataContext';
 import { formatNumber, getYearOptions, getDefaultYear } from '../../utils/formatters';
 import { useNavigate } from 'react-router-dom';
-
-// Mock monthly data entries with user-based data
-const mockMonthlyEntries = [
-  {
-    id: 'entry-001',
-    userId: 'user-012',
-    userName: 'HR Manager',
-    userRole: 'hr',
-    month: 'December',
-    year: '2025',
-    students: 320,
-    employees: 18,
-    paperReams: 85,
-    paperSheetsPerReam: 500,
-    electricityUnits: 6200,
-    waterUnits: 3100,
-    waterPricePerUnit: 45,
-    wasteOrganic: 220,
-    wasteRecyclables: 180,
-    wasteOthers: 90,
-    generatorAvgHours: 150,
-    generatorFuelLitres: 650,
-    businessTravelKms: 1800,
-    businessTravelFuelLitres: 130,
-    status: 'submitted',
-  },
-  {
-    id: 'entry-002',
-    userId: 'user-002',
-    userName: 'Hasan Ali',
-    userRole: 'coordinator',
-    month: 'December',
-    year: '2025',
-    students: 450,
-    employees: 25,
-    paperReams: 120,
-    paperSheetsPerReam: 500,
-    electricityUnits: 8320,
-    waterUnits: 4220,
-    waterPricePerUnit: 45,
-    wasteOrganic: 350,
-    wasteRecyclables: 280,
-    wasteOthers: 120,
-    generatorAvgHours: 180,
-    generatorFuelLitres: 850,
-    businessTravelKms: 2500,
-    businessTravelFuelLitres: 180,
-    status: 'submitted',
-  },
-  {
-    id: 'entry-003',
-    userId: 'user-007',
-    userName: 'Fatima Sheikh',
-    userRole: 'coordinator',
-    month: 'December',
-    year: '2025',
-    students: 380,
-    employees: 22,
-    paperReams: 95,
-    paperSheetsPerReam: 500,
-    electricityUnits: 7200,
-    waterUnits: 3600,
-    waterPricePerUnit: 45,
-    wasteOrganic: 280,
-    wasteRecyclables: 220,
-    wasteOthers: 100,
-    generatorAvgHours: 165,
-    generatorFuelLitres: 720,
-    businessTravelKms: 2100,
-    businessTravelFuelLitres: 150,
-    status: 'submitted',
-  },
-  {
-    id: 'entry-004',
-    userId: 'user-011',
-    userName: 'Ayesha Raza',
-    userRole: 'coordinator',
-    month: 'November',
-    year: '2025',
-    students: 520,
-    employees: 30,
-    paperReams: 140,
-    paperSheetsPerReam: 500,
-    electricityUnits: 9100,
-    waterUnits: 4800,
-    waterPricePerUnit: 45,
-    wasteOrganic: 420,
-    wasteRecyclables: 320,
-    wasteOthers: 150,
-    generatorAvgHours: 200,
-    generatorFuelLitres: 950,
-    businessTravelKms: 2800,
-    businessTravelFuelLitres: 200,
-    status: 'submitted',
-  },
-];
+import { getAllSubmittedEntries } from '../../services/dataEntryService';
 
 export default function AdminDashboard() {
-  const { users } = useData();
   const navigate = useNavigate();
 
   const [selectedYear, setSelectedYear] = useState(getDefaultYear());
-  const [selectedUser, setSelectedUser] = useState('all');
-  const [monthlyEntries] = useState(mockMonthlyEntries);
+  const [monthlyEntries, setMonthlyEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load submitted entries on component mount
+  useEffect(() => {
+    loadEntries();
+  }, []);
+
+  const loadEntries = async () => {
+    try {
+      setLoading(true);
+      const entries = await getAllSubmittedEntries();
+      
+      // Transform entries from history format to dashboard format
+      const transformedEntries = entries.map((entry, index) => {
+        const data = entry.data || {};
+        const step1 = data.step1 || {};
+        const step2 = data.step2 || {};
+        const step3 = data.step3 || {};
+        const step4 = data.step4 || {};
+        const step5 = data.step5 || {};
+        const step6 = data.step6 || {};
+        const step7 = data.step7 || {};
+
+        return {
+          id: `entry-${entry.year}-${entry.month}`,
+          userId: 'admin',
+          userName: 'Admin',
+          userRole: 'admin',
+          month: entry.month,
+          year: entry.year,
+          students: parseInt(step1.students) || 0,
+          employees: parseInt(step1.employees) || 0,
+          paperReams: parseFloat(step2.paperReams) || 0,
+          paperSheetsPerReam: parseFloat(step2.paperSheetsPerReam) || 500,
+          electricityUnits: parseFloat(step3.electricityUnits) || 0,
+          electricityTotalCost: parseFloat(step3.electricityTotalCost) || 0,
+          waterUnits: parseFloat(step4.waterUnits) || 0,
+          waterPricePerUnit: parseFloat(step4.waterPricePerUnit) || 0,
+          wasteOrganic: parseFloat(step5.wasteOrganic) || 0,
+          wasteRecyclables: parseFloat(step5.wasteRecyclables) || 0,
+          wasteOthers: parseFloat(step5.wasteOthers) || 0,
+          generatorAvgHours: parseFloat(step6.generatorAvgHours) || 0,
+          generatorFuelLitres: parseFloat(step6.generatorFuelLitres) || 0,
+          businessTravelKms: parseFloat(step7.businessTravelKms) || 0,
+          businessTravelFuelLitres: parseFloat(step7.businessTravelFuelLitres) || 0,
+          status: 'submitted',
+        };
+      });
+      
+      setMonthlyEntries(transformedEntries);
+    } catch (error) {
+      console.error('Error loading entries:', error);
+      setMonthlyEntries([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Reset scroll position on component mount
   useEffect(() => {
@@ -132,19 +91,22 @@ export default function AdminDashboard() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
 
-  // Get HR and Coordinator users
-  const hrAndCoordinators = useMemo(() => {
-    return users.filter((u) => u.role === 'hr' || u.role === 'coordinator');
-  }, [users]);
-
-  // Filter entries
+  // Filter entries by year and sort by month (newest first)
   const filteredEntries = useMemo(() => {
+    const monthOrder = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
     let filtered = monthlyEntries.filter((entry) => entry.year === selectedYear);
-    if (selectedUser !== 'all') {
-      filtered = filtered.filter((entry) => entry.userId === selectedUser);
-    }
+    
+    // Sort by month order (newest first)
+    filtered.sort((a, b) => {
+      return monthOrder.indexOf(b.month) - monthOrder.indexOf(a.month);
+    });
+    
     return filtered;
-  }, [monthlyEntries, selectedYear, selectedUser]);
+  }, [monthlyEntries, selectedYear]);
 
   // Calculate stats from monthly entries
   const stats = useMemo(() => {
@@ -210,7 +172,7 @@ export default function AdminDashboard() {
             Monthly Environmental Data Dashboard
           </h2>
           <p className="text-[11px] sm:text-xs md:text-sm text-slate-500 sm:text-slate-600 mt-1 break-words leading-relaxed">
-            View and manage all monthly environmental data entries by HR and Coordinators
+            View and analyze all submitted monthly environmental data entries
           </p>
         </div>
         <div className="w-full sm:w-auto shrink-0">
@@ -225,19 +187,7 @@ export default function AdminDashboard() {
 
       {/* Filters */}
       <Card className="p-3 sm:p-4 md:p-5 lg:p-6 w-full">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-5">
-          <Select
-            label="Filter by User"
-            value={selectedUser}
-            onChange={(e) => setSelectedUser(e.target.value)}
-            options={[
-              { label: 'All Users', value: 'all' },
-              ...hrAndCoordinators.map((user) => ({
-                label: `${user.name} (${user.role === 'hr' ? 'HR' : 'Coordinator'})`,
-                value: user.id,
-              })),
-            ]}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-1 gap-3 sm:gap-4 md:gap-5">
           <Select
             label="Year"
             value={selectedYear}
@@ -247,15 +197,39 @@ export default function AdminDashboard() {
         </div>
       </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 w-full">
-        {stats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
-      </div>
+      {loading && (
+        <Card className="p-6">
+          <div className="text-center py-8">
+            <p className="text-slate-500">Loading data...</p>
+          </div>
+        </Card>
+      )}
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6 w-full">
+      {!loading && filteredEntries.length === 0 && (
+        <Card className="p-6">
+          <div className="text-center py-8">
+            <p className="text-slate-500 text-lg mb-4">No data entries found for {selectedYear}</p>
+            <Button
+              variant="primary"
+              onClick={() => navigate('/admin/data-entry')}
+            >
+              Create New Entry
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {!loading && filteredEntries.length > 0 && (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 w-full">
+            {stats.map((stat) => (
+              <StatCard key={stat.label} {...stat} />
+            ))}
+          </div>
+
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6 w-full">
         <ChartWrapper
           title="Monthly Environmental Data Trends"
           description="Electricity, Water, Waste, and Fuel consumption over time"
@@ -359,6 +333,8 @@ export default function AdminDashboard() {
           </ResponsiveContainer>
         </ChartWrapper>
       </div>
+        </>
+      )}
 
     </div>
   );

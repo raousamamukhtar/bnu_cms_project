@@ -18,6 +18,11 @@ export function RoleRoute({ roles }) {
     return <Navigate to="/login" replace />;
   }
 
+  // Super admin has access to all routes
+  if (user?.role === 'super_admin') {
+    return <Outlet />;
+  }
+
   if (!roles.includes(user?.role)) {
     return <Navigate to="/login" replace />;
   }

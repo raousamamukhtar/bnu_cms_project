@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { useData } from '../../context/DataContext';
 import { Select } from '../../components/ui/Select';
@@ -10,6 +10,7 @@ import { DataViewHeader } from '../../components/management/DataViewHeader';
 import { DetailedMetricsGrid } from '../../components/management/DetailedMetricsGrid';
 import { WasteSegregationSection } from '../../components/management/WasteSegregationSection';
 import { YearlyChartsSection } from '../../components/management/YearlyChartsSection';
+import { loadAdminDataFromStorage } from '../../utils/adminDataLoader';
 
 const VIEW_TYPES = {
   MONTHLY: 'monthly',
@@ -23,10 +24,38 @@ const DEFAULT_MONTH = 'December';
  * Main dashboard for management role displaying environmental data analysis
  */
 export default function ManagementDashboard() {
-  const { monthlyAdminData } = useData();
+  const { monthlyAdminData: dummyData } = useData();
   const [viewType, setViewType] = useState(VIEW_TYPES.MONTHLY);
   const [selectedMonth, setSelectedMonth] = useState(DEFAULT_MONTH);
   const [selectedYear, setSelectedYear] = useState(getDefaultYear());
+  const [monthlyAdminData, setMonthlyAdminData] = useState(dummyData);
+  const [loading, setLoading] = useState(true);
+
+  // Load data from localStorage, fallback to dummy data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const storageData = await loadAdminDataFromStorage();
+        
+        // If we have data from storage, use it; otherwise use dummy data
+        if (storageData.length > 0) {
+          setMonthlyAdminData(storageData);
+        } else {
+          // Use dummy data as fallback
+          setMonthlyAdminData(dummyData);
+        }
+      } catch (error) {
+        console.error('Error loading admin data:', error);
+        // Fallback to dummy data on error
+        setMonthlyAdminData(dummyData);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [dummyData]);
 
   const availableYears = useAvailableYears(monthlyAdminData);
   const yearlyData = useYearlyDataAggregation(monthlyAdminData, selectedYear);
@@ -91,7 +120,13 @@ export default function ManagementDashboard() {
           showYearSelector={viewType === VIEW_TYPES.YEARLY}
         />
 
-        {selectedData ? (
+        {loading ? (
+          <Card>
+            <div className="text-center py-12">
+              <p className="text-slate-500 text-lg">Loading data...</p>
+            </div>
+          </Card>
+        ) : selectedData ? (
           <>
             <Card>
               <DetailedMetricsGrid data={selectedData} viewType={viewType} />
