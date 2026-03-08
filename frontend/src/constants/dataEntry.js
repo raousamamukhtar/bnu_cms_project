@@ -20,7 +20,6 @@ export const DATA_ENTRY_TABS = [
   { id: 'water', title: 'Water', stepId: 4 },
   { id: 'waste', title: 'Waste', stepId: 5 },
   { id: 'generator', title: 'Generator', stepId: 6 },
-  { id: 'travel', title: 'Travel', stepId: 7 },
 ];
 
 export const DEFAULT_PAPER_SHEETS_PER_REAM = 500;
@@ -35,7 +34,7 @@ export const STEP_FIELD_MAPPINGS = {
     required: false,
   },
   3: {
-    fields: ['electricityUnits', 'electricityTotalCost'],
+    fields: ['electricityUnits', 'electricityTotalCost', 'electricitySolarOffset'],
     required: false,
   },
   4: {
@@ -47,11 +46,7 @@ export const STEP_FIELD_MAPPINGS = {
     required: false,
   },
   6: {
-    fields: ['generatorAvgHours', 'generatorFuelLitres'],
-    required: false,
-  },
-  7: {
-    fields: ['businessTravelKms', 'businessTravelFuelLitres'],
+    fields: ['generatorHours', 'generatorFuelLitres'],
     required: false,
   },
 };
@@ -65,14 +60,13 @@ export const FIELD_LABELS = {
   paperSheetsPerReam: 'Sheets per ream',
   electricityUnits: 'Electricity Units',
   electricityTotalCost: 'Cost of Electricity',
+  electricitySolarOffset: 'Solar Offset (kWh)',
   waterUnits: 'Water Consumption',
   waterPricePerUnit: 'Price per unit',
   wasteOrganic: 'Organic Waste',
   wasteRecyclables: 'Recyclables',
   wasteOthers: 'Others',
-  generatorAvgHours: 'Avg. running hours',
-  generatorFuelLitres: 'Fuel quantity',
-  businessTravelKms: 'Business kms',
-  businessTravelFuelLitres: 'Fuel litres',
+  generatorHours: 'Hours',
+  generatorFuelLitres: 'Fuel (Litres)',
 };
 

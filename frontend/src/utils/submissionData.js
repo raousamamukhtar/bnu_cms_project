@@ -95,18 +95,12 @@ export const prepareStepSubmissionData = (stepId, formData) => {
     case 6:
       return {
         generator: {
-          avgRunningHours: parseNumber(formData.generatorAvgHours),
+          avgRunningHours: parseNumber(formData.generatorHours),
           fuelLitres: parseNumber(formData.generatorFuelLitres),
         },
       };
 
-    case 7:
-      return {
-        travel: {
-          businessKms: parseNumber(formData.businessTravelKms),
-          fuelLitres: parseNumber(formData.businessTravelFuelLitres),
-        },
-      };
+
 
     default:
       return {};
@@ -117,11 +111,10 @@ export const prepareStepData = (stepId, formData) => {
   const stepConfig = {
     1: ['month', 'year', 'students', 'employees'],
     2: ['paperReams', 'paperSheetsPerReam'],
-    3: ['electricityUnits', 'electricityTotalCost'],
+    3: ['electricityUnits', 'electricityTotalCost', 'electricitySolarOffset'],
     4: ['waterUnits', 'waterPricePerUnit'],
     5: ['wasteOrganic', 'wasteRecyclables', 'wasteOthers'],
-    6: ['generatorAvgHours', 'generatorFuelLitres'],
-    7: ['businessTravelKms', 'businessTravelFuelLitres'],
+    6: ['generatorHours', 'generatorFuelLitres'],
   };
 
   const fields = stepConfig[stepId] || [];
@@ -202,17 +195,12 @@ export const prepareCompleteSubmissionData = (formData, savedData) => {
 
   if (savedData.step6) {
     completeData.generator = {
-      avgRunningHours: parseNumber(savedData.step6.generatorAvgHours),
+      avgRunningHours: parseNumber(savedData.step6.generatorHours),
       fuelLitres: parseNumber(savedData.step6.generatorFuelLitres),
     };
   }
 
-  if (savedData.step7) {
-    completeData.travel = {
-      businessKms: parseNumber(savedData.step7.businessTravelKms),
-      fuelLitres: parseNumber(savedData.step7.businessTravelFuelLitres),
-    };
-  }
+
 
   return completeData;
 };

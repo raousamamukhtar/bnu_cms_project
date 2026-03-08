@@ -16,7 +16,7 @@ import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { formatNumber } from '../../utils/formatters';
 import { useNavigate } from 'react-router-dom';
-import { loadCarbonAccountantDataFromStorage } from '../../utils/carbonAccountantDataLoader';
+import { carbonService } from '../../services/carbonService';
 
 export default function CarbonAQIDashboard() {
   const { user } = useAuth();
@@ -24,13 +24,25 @@ export default function CarbonAQIDashboard() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load data from localStorage
+  // Load data from API
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
       try {
         setLoading(true);
-        const data = loadCarbonAccountantDataFromStorage();
-        setEntries(data);
+        const data = await carbonService.getCarbonData();
+
+        // Transform API response to match expected format
+        const transformedData = data.map(entry => ({
+          month: entry.month,
+          monthAbbr: entry.month.substring(0, 3),
+          year: entry.year,
+          aqi: parseFloat(entry.aqi) || 0,
+          carbonFootprint: parseFloat(entry.carbonFootprint) || 0,
+          pm25: 0, // Not in current schema
+          pm10: 0, // Not in current schema
+        }));
+
+        setEntries(transformedData);
       } catch (error) {
         console.error('Error loading carbon accountant data:', error);
         setEntries([]);
@@ -121,14 +133,14 @@ export default function CarbonAQIDashboard() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button 
+            <Button
               variant="secondary"
               onClick={() => navigate('/carbon-accountant/history')}
               className="whitespace-nowrap bg-white/90 hover:bg-white text-slate-900 font-semibold shadow-md border-0"
             >
               History
             </Button>
-            <Button 
+            <Button
               variant="secondary"
               onClick={() => navigate('/carbon-accountant/data-entry')}
               className="whitespace-nowrap bg-white/90 hover:bg-white text-slate-900 font-semibold shadow-md border-0"
@@ -169,11 +181,11 @@ export default function CarbonAQIDashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ fontSize: '12px' }}
                     wrapperStyle={{ fontSize: '12px' }}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
                   />
                   <Line
@@ -215,11 +227,11 @@ export default function CarbonAQIDashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ fontSize: '12px' }}
                     wrapperStyle={{ fontSize: '12px' }}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
                   />
                   <Bar dataKey="aqi" fill="#0ea5e9" name="AQI" radius={[8, 8, 0, 0]} />
@@ -240,7 +252,7 @@ export default function CarbonAQIDashboard() {
         </Card>
       </div>
 
-      
+
     </div>
   );
 }

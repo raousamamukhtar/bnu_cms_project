@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 export function useYearlyDataAggregation(monthlyData, selectedYear) {
   return useMemo(() => {
     const filteredData = monthlyData.filter(
-      (entry) => entry.period.year === selectedYear
+      (entry) => entry.period.year == selectedYear
     );
 
     if (filteredData.length === 0) return null;
@@ -18,40 +18,55 @@ export function useYearlyDataAggregation(monthlyData, selectedYear) {
     const avgPersonnel = {
       students: Math.round(
         filteredData.reduce((sum, entry) => sum + entry.personnel.students, 0) /
-          filteredData.length
+        filteredData.length
       ),
       employees: Math.round(
         filteredData.reduce((sum, entry) => sum + entry.personnel.employees, 0) /
-          filteredData.length
+        filteredData.length
       ),
       total: Math.round(
         filteredData.reduce((sum, entry) => sum + entry.personnel.total, 0) /
-          filteredData.length
+        filteredData.length
       ),
     };
 
     // Aggregate all metrics
     const aggregated = filteredData.reduce(
       (acc, entry) => {
-        acc.paper.reams += entry.paper.reams;
-        acc.paper.totalSheets += entry.paper.totalSheets;
+        if (entry.paper) {
+          acc.paper.reams += entry.paper.reams || 0;
+          acc.paper.totalSheets += entry.paper.totalSheets || 0;
+        }
 
-        acc.electricity.units += entry.electricity.units;
-        acc.electricity.totalCost += entry.electricity.totalCost;
+        if (entry.electricity) {
+          acc.electricity.units += entry.electricity.units || 0;
+          acc.electricity.totalCost += entry.electricity.totalCost || 0;
+        }
 
-        acc.water.units += entry.water.units;
-        acc.water.totalCost += entry.water.totalCost;
+        if (entry.water) {
+          acc.water.units += entry.water.units || 0;
+          acc.water.totalCost += entry.water.totalCost || 0;
+        }
 
-        acc.waste.organic += entry.waste.organic;
-        acc.waste.recyclables += entry.waste.recyclables;
-        acc.waste.others += entry.waste.others;
-        acc.waste.total += entry.waste.total;
+        if (entry.waste) {
+          acc.waste.organic += entry.waste.organic || 0;
+          acc.waste.recyclables += entry.waste.recyclables || 0;
+          acc.waste.others += entry.waste.others || 0;
+          acc.waste.total += entry.waste.total || 0;
+        }
 
-        acc.generator.avgRunningHours += entry.generator.avgRunningHours;
-        acc.generator.fuelLitres += entry.generator.fuelLitres;
+        if (entry.generator) {
+          acc.generator.avgRunningHours += entry.generator.avgRunningHours || 0;
+          acc.generator.fuelLitres += entry.generator.fuelLitres || 0;
+        }
 
-        acc.travel.businessKms += entry.travel.businessKms;
-        acc.travel.fuelLitres += entry.travel.fuelLitres;
+
+
+        if (entry.carbon) {
+          acc.carbon.aqiTotal += entry.carbon.aqi || 0;
+          acc.carbon.carbonFootprint += entry.carbon.carbonFootprint || 0;
+          acc.carbon.count += 1;
+        }
 
         return acc;
       },
@@ -85,7 +100,7 @@ export function useYearlyDataAggregation(monthlyData, selectedYear) {
           perCapitaGeneration: '0',
         },
         generator: { avgRunningHours: 0, fuelLitres: 0 },
-        travel: { businessKms: 0, fuelLitres: 0 },
+        carbon: { aqiTotal: 0, carbonFootprint: 0, count: 0 },
         submittedAt: new Date().toISOString(),
         submittedBy: 'admin',
       }
@@ -121,6 +136,16 @@ export function useYearlyDataAggregation(monthlyData, selectedYear) {
       totalPersonnelMonths > 0
         ? (aggregated.waste.total / totalPersonnelMonths).toFixed(3)
         : '0';
+
+    // Calculate yearly Carbon & AQI
+    if (aggregated.carbon.count > 0) {
+      aggregated.carbon = {
+        aqi: Math.round(aggregated.carbon.aqiTotal / aggregated.carbon.count),
+        carbonFootprint: parseFloat(aggregated.carbon.carbonFootprint.toFixed(2)),
+      };
+    } else {
+      aggregated.carbon = { aqi: 0, carbonFootprint: 0 };
+    }
 
     return aggregated;
   }, [monthlyData, selectedYear]);

@@ -45,16 +45,17 @@ const METRIC_CONFIG = {
     title: 'Generator Usage',
     iconColor: 'bg-amber-500',
     fields: [
-      { label: 'Avg. Hours:', key: 'avgRunningHours', format: (v) => v.toLocaleString() },
+      { label: 'Total Hours:', key: 'avgRunningHours', format: (v) => v.toLocaleString() },
       { label: 'Fuel (Litres):', key: 'fuelLitres', format: (v) => v.toLocaleString() },
     ],
   },
-  travel: {
-    title: 'Business Travel',
-    iconColor: 'bg-red-500',
+
+  carbon: {
+    title: 'Carbon & AQI',
+    iconColor: 'bg-emerald-700',
     fields: [
-      { label: 'Distance (km):', key: 'businessKms', format: (v) => v.toLocaleString() },
-      { label: 'Fuel (Litres):', key: 'fuelLitres', format: (v) => v.toLocaleString() },
+      { label: 'AQI:', key: 'aqi', format: (v) => v },
+      { label: 'Carbon Footprint:', key: 'carbonFootprint', format: (v) => `${v} tCO₂e` },
     ],
   },
 };
@@ -64,7 +65,7 @@ const METRIC_CONFIG = {
  * Displays all metrics in a grid layout
  */
 export function DetailedMetricsGrid({ data, viewType }) {
-  const periodLabel = viewType === 'yearly' 
+  const periodLabel = viewType === 'yearly'
     ? `${data.period.year} (Yearly Aggregated)`
     : `${data.period.month} ${data.period.year}`;
 
@@ -74,17 +75,20 @@ export function DetailedMetricsGrid({ data, viewType }) {
         Detailed Metrics for {periodLabel}
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {Object.entries(METRIC_CONFIG).map(([key, config]) => (
-          <MetricCard key={key} title={config.title} iconColor={config.iconColor}>
-            {config.fields.map((field) => (
-              <MetricRow
-                key={field.key}
-                label={field.label}
-                value={field.format(data[key][field.key])}
-              />
-            ))}
-          </MetricCard>
-        ))}
+        {Object.entries(METRIC_CONFIG).map(([key, config]) => {
+          const metricData = data[key] || {};
+          return (
+            <MetricCard key={key} title={config.title} iconColor={config.iconColor}>
+              {config.fields.map((field) => (
+                <MetricRow
+                  key={field.key}
+                  label={field.label}
+                  value={field.format(metricData[field.key] || 0)}
+                />
+              ))}
+            </MetricCard>
+          );
+        })}
       </div>
     </div>
   );

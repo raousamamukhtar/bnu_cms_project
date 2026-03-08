@@ -24,6 +24,7 @@ export function RoleRoute({ roles }) {
   }
 
   if (!roles.includes(user?.role)) {
+    console.warn(`Access denied to role: ${user?.role}. Required one of: ${roles.join(', ')}`);
     return <Navigate to="/login" replace />;
   }
 

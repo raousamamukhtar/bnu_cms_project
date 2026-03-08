@@ -20,9 +20,9 @@ export function MetricCard({ title, iconColor = 'bg-emerald-500', children }) {
  */
 export function MetricRow({ label, value }) {
   return (
-    <div className="flex justify-between">
-      <span className="text-slate-600">{label}</span>
-      <span className="font-medium">{value}</span>
+    <div className="flex justify-between items-center py-1 border-b border-slate-100 last:border-0">
+      <span className="text-slate-700 font-medium">{label}</span>
+      <span className="text-slate-900 font-bold">{value}</span>
     </div>
   );
 }

@@ -1,29 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '../../components/ui/Input';
-import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useUI } from '../../context/UIContext';
-import { loginSchema } from '../../utils/validation';
-
-const roleOptions = [
-  { label: 'Admin', value: 'admin' },
-  { label: 'Coordinator', value: 'coordinator' },
-  { label: 'Management ', value: 'management' },
-  { label: 'HR', value: 'hr' },
-  { label: 'Marketing ', value: 'marketing' },
-  { label: 'Carbon Accountant', value: 'carbon_accountant' },
-];
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { addToast } = useUI();
   const [form, setForm] = useState({
-    username: '',
+    email: '',
     password: '',
-    role: 'admin',
   });
   const [errors, setErrors] = useState({});
 
@@ -32,27 +20,23 @@ export default function Login() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = loginSchema.safeParse(form);
-    if (!result.success) {
-      const fieldErrors = result.error.flatten().fieldErrors;
-      setErrors({
-        username: fieldErrors.username?.[0],
-        password: fieldErrors.password?.[0],
-        role: fieldErrors.role?.[0],
-      });
+
+    // Basic validation
+    if (!form.email || !form.password) {
+      setErrors({ email: 'Email and password are required' });
       return;
     }
 
     try {
-      const redirectPath = login(form.username, form.role);
-      addToast(`Welcome back, ${form.username}!`);
+      const redirectPath = await login(form.email, form.password);
+      addToast(`Welcome back!`);
       navigate(redirectPath);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Unable to sign in. Please try again.';
-      setErrors((prev) => ({ ...prev, username: message }));
+      setErrors((prev) => ({ ...prev, email: message }));
       addToast(message, 'error');
     }
   };
@@ -89,33 +73,28 @@ export default function Login() {
             </p>
           </div>
           <Input
-            label="Username"
-            name="username"
-            value={form.username}
+            label="Email"
+            name="email"
+            type="email"
+            placeholder="your.email@bnu.edu.pk"
+            value={form.email}
             onChange={handleChange}
-            error={errors.username}
+            error={errors.email}
           />
           <Input
             label="Password"
             type="password"
             name="password"
+            placeholder="Enter your password"
             value={form.password}
             onChange={handleChange}
             error={errors.password}
           />
-          <Select
-            label="Sign in as"
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            options={roleOptions}
-            error={errors.role}
-          />
           <Button type="submit" className="w-full h-11">
             Enter Dashboard
           </Button>
-          {errors.username && (
-            <p className="text-xs text-red-500 text-center">{errors.username}</p>
+          {errors.email && (
+            <p className="text-xs text-red-500 text-center">{errors.email}</p>
           )}
           <p className="text-xs text-slate-400 text-center">
             Demo mode: any password works. Data auto-refreshes for sandbox use.

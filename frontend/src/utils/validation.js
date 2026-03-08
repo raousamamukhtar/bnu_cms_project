@@ -25,7 +25,7 @@ export const coordinatorEntrySchema = z.object({
     .string()
     .min(1, 'Year required')
     .regex(/^\d{4}$/, 'Year must be 4 digits'),
-  
+
   // Default fields
   students: positiveNumber('No. of Students'),
   employees: positiveNumber('No. of Employees'),

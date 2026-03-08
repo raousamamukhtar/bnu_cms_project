@@ -8,6 +8,7 @@ import { renderTabContent } from '../../components/admin/DataEntryFormFields';
 import { DATA_ENTRY_TABS } from '../../constants/dataEntry';
 import { useDataEntryForm } from '../../hooks/useDataEntryForm';
 import { validateStep } from '../../utils/stepValidation';
+import { SubmissionSuccessModal } from '../../components/admin/SubmissionSuccessModal';
 import {
   prepareStepData,
   prepareCompleteSubmissionData,
@@ -25,21 +26,26 @@ export default function DataEntry() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [currentTab, setCurrentTab] = useState('basic');
+  const [submitting, setSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [submittedMonthYear, setSubmittedMonthYear] = useState('');
 
   const editYear = searchParams.get('year');
   const editMonth = searchParams.get('month');
   const isEditMode = searchParams.get('edit') === 'true';
 
   const handleEditRestriction = () => {
-        addToast('Cannot edit entries older than one month', 'error');
-        navigate('/admin/history');
+    addToast('Cannot edit entries older than one month', 'error');
+    navigate('/admin/history');
   };
 
   const {
     formData,
     submittedTabs,
+    isExistingEntry,
     updateField,
     updateSubmittedTabs,
+    resetFormForNextMonth,
   } = useDataEntryForm(handleEditRestriction, editYear, editMonth, isEditMode);
 
   useEffect(() => {
@@ -63,7 +69,7 @@ export default function DataEntry() {
         addToast,
       });
       if (!isValid) {
-      return;
+        return;
       }
     }
     setCurrentTab(tabId);
@@ -81,8 +87,9 @@ export default function DataEntry() {
       return;
     }
 
-    if (!formData.month || !formData.year) {
-      addToast('Please select month and year first', 'error');
+    // For steps 2-7, month and year are required to create/fetch period
+    if (stepId !== 1 && (!formData.month || !formData.year)) {
+      addToast('Please select month and year in the Basic Information tab first', 'error');
       return;
     }
 
@@ -95,38 +102,37 @@ export default function DataEntry() {
       return;
     }
 
-    const stepData = prepareStepData(stepId, formData);
+    try {
+      setSubmitting(true);
+      const stepData = prepareStepData(stepId, formData);
+      await saveStepData(formData.year, formData.month, stepData, stepId);
+      saveSubmissionStatus(formData.year, formData.month, stepId, true);
+      updateSubmittedTabs(stepId, true);
 
-    saveStepData(formData.year, formData.month, stepData, stepId);
-    saveSubmissionStatus(formData.year, formData.month, stepId, true);
-    updateSubmittedTabs(stepId, true);
-
-    addToast(`${tab.title} data submitted successfully!`, 'success');
+      addToast(`${tab.title} data submitted successfully!`, 'success');
+    } catch (error) {
+      console.error(`Error submitting ${tab.title} data:`, error);
+      addToast(`Failed to submit ${tab.title} data. Please try again.`, 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleFinalSubmit = async () => {
-    if (!formData.month || !formData.year) {
-      addToast('Please select month and year first', 'error');
-      return;
-    }
+    // TEMPORARILY DISABLED: Month/year validation
+    // if (!formData.month || !formData.year) {
+    //   addToast('Please select month and year first', 'error');
+    //   return;
+    // }
 
     if (!allStepsCompleted) {
       addToast('Please complete all tabs before final submission', 'error');
       return;
     }
 
-    if (!submittedTabs[7]) {
-      const isValid = validateStep(7, formData, {
-        showToast: true,
-        addToast,
-      });
-      if (!isValid) {
-        return;
-      }
-      await handleTabSubmit('travel');
-    }
 
-    const savedData = loadStepData(formData.year, formData.month);
+
+    const savedData = await loadStepData(formData.year, formData.month);
     if (!savedData) {
       addToast('No data found to submit', 'error');
       return;
@@ -135,15 +141,49 @@ export default function DataEntry() {
     const completeData = prepareCompleteSubmissionData(formData, savedData);
 
     try {
+      setSubmitting(true);
       await submitCompleteEntry(formData.year, formData.month, completeData);
+
+      // Store the submitted month/year for modal display
+      setSubmittedMonthYear(`${formData.month} ${formData.year}`);
+
+      // Show success modal instead of immediate redirect
+      setShowSuccessModal(true);
+
       addToast('All data submitted successfully!', 'success');
-      setTimeout(() => {
-        navigate('/admin/dashboard');
-      }, 1500);
     } catch (error) {
       console.error('Final submission error:', error);
       addToast('Failed to submit data. Please try again.', 'error');
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  const handleEnterNextMonth = () => {
+    // Reset form for next month
+    const nextPeriod = resetFormForNextMonth(formData.month, formData.year);
+
+    // Clear localStorage submission status for the current period
+    localStorage.removeItem(`submission_status_${formData.year}_${formData.month}`);
+
+    // Close modal
+    setShowSuccessModal(false);
+
+    // Reset to first tab
+    setCurrentTab('basic');
+
+    // Show success message
+    addToast(`Ready to enter data for ${nextPeriod.month} ${nextPeriod.year}`, 'success');
+  };
+
+  const handleGoToDashboard = () => {
+    setShowSuccessModal(false);
+    navigate('/admin/dashboard');
+  };
+
+  const handleCloseModal = () => {
+    // Just close modal, stay on current page
+    setShowSuccessModal(false);
   };
 
   const currentTabIndex = DATA_ENTRY_TABS.findIndex((t) => t.id === currentTab);
@@ -174,7 +214,28 @@ export default function DataEntry() {
           </div>
         </div>
 
-        <Card className="bg-white border-2 border-emerald-100 shadow-lg mb-6">
+        <Card className="bg-white border-2 border-emerald-100 shadow-lg mb-6 overflow-hidden">
+          {/* Locked Warning - Styled like Carbon Accountant */}
+          {/* Existing Entry Warning */}
+          {isExistingEntry && !isEditMode && (
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 m-6 mb-0 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-amber-700">
+                    Data for <strong>{formData.month} {formData.year}</strong> already exists.
+                    <br />
+                    You are editing an existing submission or draft.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="p-4">
             <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-200">
               <DataEntryTabs
@@ -183,17 +244,7 @@ export default function DataEntry() {
                 submittedTabs={submittedTabs}
                 onTabClick={handleTabClick}
               />
-              <div className="ml-auto flex items-center">
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={handleFinalSubmit}
-                  className="bg-emerald-600 hover:bg-emerald-700 whitespace-nowrap"
-                  disabled={!allStepsCompleted}
-                >
-                  ✓ Final Submit
-                </Button>
-              </div>
+
             </div>
           </div>
 
@@ -204,7 +255,9 @@ export default function DataEntry() {
                 formData,
                 updateField,
                 handlePeriodChangeError,
-                allStepsCompleted
+                allStepsCompleted,
+                isEditMode,
+                false // Never lock fields, allow editing always
               )}
             </div>
 
@@ -236,8 +289,10 @@ export default function DataEntry() {
                   className={
                     isCurrentTabSubmitted ? 'bg-blue-600 hover:bg-blue-700' : ''
                   }
+                  loading={submitting}
+                  disabled={submitting}
                 >
-                  Submit {DATA_ENTRY_TABS.find((t) => t.id === currentTab)?.title || 'Tab'}
+                  {isExistingEntry ? `Update ${DATA_ENTRY_TABS.find((t) => t.id === currentTab)?.title || 'Tab'}` : `Submit ${DATA_ENTRY_TABS.find((t) => t.id === currentTab)?.title || 'Tab'}`}
                 </Button>
                 {currentTabIndex < DATA_ENTRY_TABS.length - 1 && (
                   <Button
@@ -256,7 +311,7 @@ export default function DataEntry() {
             </div>
           </div>
 
-          {formData.month && formData.year && !allStepsCompleted && (
+          {formData.month && formData.year && !allStepsCompleted && !isExistingEntry && (
             <div className="bg-yellow-50 border-t-2 border-yellow-200 p-4">
               <p className="text-sm text-yellow-800">
                 ⚠️ <strong>Warning:</strong> Please complete all tabs before changing to a
@@ -270,6 +325,15 @@ export default function DataEntry() {
           )}
         </Card>
       </div>
+
+      {/* Success Modal */}
+      <SubmissionSuccessModal
+        isOpen={showSuccessModal}
+        onClose={handleCloseModal}
+        onEnterNextMonth={handleEnterNextMonth}
+        onGoToDashboard={handleGoToDashboard}
+        monthYear={submittedMonthYear}
+      />
     </div>
   );
 }

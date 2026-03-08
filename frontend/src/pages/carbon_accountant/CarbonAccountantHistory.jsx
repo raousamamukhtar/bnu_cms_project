@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Table } from '../../components/ui/Table';
+import { Modal } from '../../components/ui/Modal';
+import { Input } from '../../components/ui/Input';
 import { useUI } from '../../context/UIContext';
+import { carbonService } from '../../services/carbonService';
 
 const months = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -11,55 +14,28 @@ const months = [
 ];
 
 /**
- * Get all carbon accountant submitted entries
+ * Get all carbon accountant submitted entries from API
  * @returns {Promise<Array>} Array of entry objects
  */
 const getAllCarbonAccountantEntries = async () => {
-  const entries = [];
-  const processed = new Set();
-  
-  // Scan localStorage for all carbon accountant entries
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('carbon_accountant_data_')) {
-      const parts = key.replace('carbon_accountant_data_', '').split('_');
-      if (parts.length === 2) {
-        const year = parts[0];
-        const month = parts[1];
-        const entryKey = `${year}_${month}`;
-        
-        // Avoid duplicates
-        if (!processed.has(entryKey)) {
-          processed.add(entryKey);
-          
-          const entryData = localStorage.getItem(key);
-          if (entryData) {
-            try {
-              const data = JSON.parse(entryData);
-              entries.push({
-                year,
-                month,
-                data,
-                submittedAt: localStorage.getItem(`carbon_accountant_submittedAt_${year}_${month}`) || null,
-              });
-            } catch (e) {
-              console.error('Error parsing entry data:', e);
-            }
-          }
-        }
-      }
-    }
+  try {
+    const data = await carbonService.getCarbonData();
+
+    // Transform API response to match expected format
+    return data.map(entry => ({
+      id: entry.id,
+      year: entry.year,
+      month: entry.month,
+      data: {
+        aqi: entry.aqi,
+        carbonFootprint: entry.carbonFootprint
+      },
+      submittedAt: entry.submittedAt
+    }));
+  } catch (error) {
+    console.error('Error fetching carbon data:', error);
+    return [];
   }
-  
-  // Sort by year (descending) then by month
-  entries.sort((a, b) => {
-    if (b.year !== a.year) {
-      return parseInt(b.year) - parseInt(a.year);
-    }
-    return months.indexOf(b.month) - months.indexOf(a.month);
-  });
-  
-  return entries;
 };
 
 /**
@@ -73,14 +49,14 @@ const canEditEntry = (year, month) => {
   const currentYear = now.getFullYear().toString();
   const currentMonthIndex = now.getMonth(); // 0-based (0 = January)
   const currentMonth = months[currentMonthIndex];
-  
+
   // Calculate previous month
   const previousMonthIndex = currentMonthIndex === 0 ? 11 : currentMonthIndex - 1;
   const previousMonth = months[previousMonthIndex];
-  const previousYear = currentMonthIndex === 0 
-    ? (now.getFullYear() - 1).toString() 
+  const previousYear = currentMonthIndex === 0
+    ? (now.getFullYear() - 1).toString()
     : currentYear;
-  
+
   // Can edit current month or previous month only
   return (
     (year === currentYear && month === currentMonth) ||
@@ -93,6 +69,12 @@ export default function CarbonAccountantHistory() {
   const navigate = useNavigate();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [updateLoading, setUpdateLoading] = useState(false);
 
   useEffect(() => {
     loadEntries();
@@ -112,13 +94,39 @@ export default function CarbonAccountantHistory() {
   };
 
   const handleEdit = (entry) => {
-    // Check if entry can be edited
     if (!canEditEntry(entry.year, entry.month)) {
       addToast('Cannot edit entries older than one month', 'error');
       return;
     }
-    // Navigate to data entry with the month/year pre-filled
-    navigate(`/carbon-accountant/data-entry?year=${entry.year}&month=${entry.month}&edit=true`);
+
+    setEditingEntry(entry);
+    setEditFormData({
+      aqi: entry.data?.aqi || '',
+      carbonFootprint: entry.data?.carbonFootprint || '',
+    });
+    setModalOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    try {
+      setUpdateLoading(true);
+      if (!editingEntry) return;
+
+      await carbonService.updateCarbonEntry(editingEntry.id, {
+        aqi: editFormData.aqi,
+        carbonFootprint: editFormData.carbonFootprint,
+      });
+
+      addToast(`Data for ${editingEntry.month} updated successfully!`, 'success');
+      setModalOpen(false);
+      loadEntries();
+
+    } catch (error) {
+      console.error("Update failed:", error);
+      addToast("Failed to update entry", "error");
+    } finally {
+      setUpdateLoading(false);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -140,14 +148,14 @@ export default function CarbonAccountantHistory() {
   const getDataPreview = (entry) => {
     const { data } = entry;
     const preview = [];
-    
+
     if (data.aqi) {
       preview.push(`AQI: ${data.aqi}`);
     }
     if (data.carbonFootprint) {
       preview.push(`Carbon: ${data.carbonFootprint} tCO₂e`);
     }
-    
+
     return preview.length > 0 ? preview.join(', ') : 'No data';
   };
 
@@ -268,6 +276,55 @@ export default function CarbonAccountantHistory() {
           </div>
         </Card>
       </div>
+
+      {/* Edit Modal */}
+      <Modal
+        open={modalOpen}
+        onClose={() => !updateLoading && setModalOpen(false)}
+        title={`Edit Data - ${editingEntry?.month} ${editingEntry?.year}`}
+      >
+        <div className="space-y-4 px-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">AQI</label>
+              <Input
+                type="number"
+                step="0.01"
+                value={editFormData.aqi}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, aqi: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Carbon Footprint (tCO₂e)</label>
+              <Input
+                type="number"
+                step="0.01"
+                value={editFormData.carbonFootprint}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, carbonFootprint: e.target.value }))}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t mt-4">
+          <Button
+            variant="secondary"
+            onClick={() => setModalOpen(false)}
+            disabled={updateLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleUpdate}
+            loading={updateLoading}
+            disabled={updateLoading}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            {updateLoading ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

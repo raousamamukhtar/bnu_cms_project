@@ -76,25 +76,7 @@ const getStepName = (stepId) => {
 };
 
 export const canEditEntry = (year, month) => {
-  const now = new Date();
-  const currentYear = now.getFullYear().toString();
-  const currentMonthIndex = now.getMonth();
-  const previousMonthIndex = currentMonthIndex === 0 ? 11 : currentMonthIndex - 1;
-  const previousYear = currentMonthIndex === 0
-    ? (now.getFullYear() - 1).toString()
-    : currentYear;
-
-  const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  const currentMonth = MONTHS[currentMonthIndex];
-  const previousMonth = MONTHS[previousMonthIndex];
-
-  return (
-    (year === currentYear && month === currentMonth) ||
-    (year === previousYear && month === previousMonth)
-  );
+  // Admin can edit any entry
+  return true;
 };
 

@@ -23,18 +23,16 @@ const calculateCarbonImpact = (metrics) => {
 const MetricSection = ({ title, children, isPrimary = false }) => {
   return (
     <section
-      className={`space-y-3 pb-4 ${
-        isPrimary ? '' : 'border-b border-slate-200 dark:border-slate-700 last:border-0'
-      }`}
+      className={`space-y-3 pb-4 ${isPrimary ? '' : 'border-b border-slate-200 dark:border-slate-700 last:border-0'
+        }`}
       aria-labelledby={title.toLowerCase().replace(/\s+/g, '-')}
     >
       <h3
         id={title.toLowerCase().replace(/\s+/g, '-')}
-        className={`text-xs font-semibold uppercase tracking-wider ${
-          isPrimary
-            ? 'text-slate-900 dark:text-slate-100 text-sm'
-            : 'text-slate-600 dark:text-slate-400'
-        }`}
+        className={`text-xs font-semibold uppercase tracking-wider ${isPrimary
+          ? 'text-slate-900 dark:text-slate-100 text-sm'
+          : 'text-slate-600 dark:text-slate-400'
+          }`}
       >
         {title}
       </h3>
@@ -52,11 +50,10 @@ const MetricRow = ({ label, value, unit = '', highlight = false, ariaLabel }) =>
     >
       <span className="text-xs text-slate-600 dark:text-slate-400">{label}</span>
       <span
-        className={`text-xs tabular-nums ${
-          highlight
-            ? 'font-semibold text-slate-900 dark:text-slate-100'
-            : 'font-medium text-slate-700 dark:text-slate-300'
-        }`}
+        className={`text-xs tabular-nums ${highlight
+          ? 'font-semibold text-slate-900 dark:text-slate-100'
+          : 'font-medium text-slate-700 dark:text-slate-300'
+          }`}
       >
         {value} {unit}
       </span>
@@ -370,9 +367,9 @@ export function MetricsPanel({ metrics, period }) {
                     {metrics.generator && (
                       <div className="space-y-2">
                         <MetricRow
-                          label="Avg. Running Hours"
+                          label="Total Hours"
                           value={formatCompactNumber(metrics.generator.avgRunningHours)}
-                          ariaLabel={`Generator average running hours: ${formatCompactNumber(metrics.generator.avgRunningHours)}`}
+                          ariaLabel={`Generator total hours: ${formatCompactNumber(metrics.generator.avgRunningHours)}`}
                         />
                         <MetricRow
                           label="Fuel Consumption"

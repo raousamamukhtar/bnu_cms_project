@@ -23,13 +23,22 @@ export function Sidebar() {
     coordinator: [
       { to: '/coordinator/dashboard', label: 'Dashboard' },
       { to: '/coordinator/data-entry', label: 'Data Entry' },
+      { to: '/coordinator/history', label: 'History' },
+    ],
+    student_affairs: [
+      { to: '/student-affairs/dashboard', label: 'Dashboard' },
+      { to: '/student-affairs/data-entry', label: 'Data Entry' },
+      { to: '/student-affairs/history', label: 'History' },
     ],
     management: [
       { to: '/management/dashboard', label: 'Dashboard' },
+      { to: '/management/reports', label: 'Reports & Export' },
+      { to: '/management/events', label: 'Live Events Feed' },
     ],
     hr: [
       { to: '/hr/dashboard', label: 'Dashboard' },
       { to: '/hr/data-entry', label: 'Data Entry' },
+      { to: '/hr/history', label: 'History' },
     ],
     marketing: [
       { to: '/marketing/dashboard', label: 'Dashboard' },
@@ -48,6 +57,7 @@ export function Sidebar() {
       { to: '/coordinator/dashboard', label: 'Coordinator Dashboard' },
       { to: '/coordinator/data-entry', label: 'Coordinator Data Entry' },
       { to: '/management/dashboard', label: 'Management Dashboard' },
+      { to: '/management/reports', label: 'Management Reports' },
       { to: '/hr/dashboard', label: 'HR Dashboard' },
       { to: '/hr/data-entry', label: 'HR Data Entry' },
       { to: '/marketing/dashboard', label: 'Marketing Dashboard' },
@@ -56,6 +66,7 @@ export function Sidebar() {
       { to: '/carbon-accountant/dashboard', label: 'Carbon Accountant Dashboard' },
       { to: '/carbon-accountant/data-entry', label: 'Carbon Accountant Data Entry' },
       { to: '/carbon-accountant/history', label: 'Carbon Accountant History' },
+      { to: '/management/events', label: 'Management Events' },
     ],
   };
 

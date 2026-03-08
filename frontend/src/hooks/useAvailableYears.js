@@ -7,7 +7,7 @@ import { useMemo } from 'react';
  */
 export function useAvailableYears(monthlyData) {
   return useMemo(() => {
-    const years = [...new Set(monthlyData.map((entry) => entry.period.year))];
+    const years = [...new Set(monthlyData.map((entry) => entry.period.year.toString()))];
     return years.sort((a, b) => b.localeCompare(a)); // Sort descending (newest first)
   }, [monthlyData]);
 }
