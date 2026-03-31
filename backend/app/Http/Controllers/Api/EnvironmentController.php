@@ -2,63 +2,31 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\EnvironmentData; // Ensure this model exists
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use App\Services\EnvironmentService;
+use App\Http\Requests\Environment\StoreEnvironmentDataRequest;
+use App\Http\Resources\EnvironmentDataResource;
+use Illuminate\Http\JsonResponse;
+use App\Traits\ApiResponser;
 
 class EnvironmentController extends Controller
 {
-    /**
-     * Display a listing of environment data.
-     */
-    public function index()
-    {
-        // Fetch all records from Oracle
-        $data = EnvironmentData::orderBy('recorded_year', 'desc')
-                               ->orderBy('recorded_month', 'desc')
-                               ->get();
+    use ApiResponser;
 
-        return response()->json([
-            'success' => true,
-            'data' => $data
-        ], 200);
+    public function __construct(protected EnvironmentService $environmentService) {}
+
+    public function index(): JsonResponse
+    {
+        $data = $this->environmentService->getAll();
+        return $this->successResponse(EnvironmentDataResource::collection($data), 'Environment data retrieved successfully');
     }
 
-    /**
-     * Store a new environment record.
-     */
-    public function store(Request $request)
+    public function store(StoreEnvironmentDataRequest $request): JsonResponse
     {
-        // 1. Validation
-        $validator = Validator::make($request->all(), [
-            'recorded_year'    => 'required|integer|min:2000|max:2099',
-            'recorded_month'   => 'required|string',
-            'aqi_index'        => 'required|integer',
-            'carbon_footprint' => 'required|numeric',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // 2. Save to Oracle
         try {
-            $entry = EnvironmentData::create($request->all());
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Data recorded successfully',
-                'data' => $entry
-            ], 201);
-            
+            $entry = $this->environmentService->create($request->validated());
+            return $this->successResponse(new EnvironmentDataResource($entry), 'Data recorded successfully', 201);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Oracle Error: ' . $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Oracle Error: ' . $e->getMessage(), 500);
         }
     }
 }
