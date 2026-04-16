@@ -16,40 +16,80 @@ class EventController extends Controller
     use ApiResponser;
 
     public function __construct(protected EventService $eventService) {}
-
+    
+    /**
+     * List all events for the authenticated user.
+     * 
+     * @param Request $request
+     * @return JsonResponse
+     */
     public function index(Request $request): JsonResponse
     {
-        $events = $this->eventService->getEventsForUser($request->user());
-        return $this->successResponse(EventResource::collection($events), 'Events retrieved successfully');
+        try {
+            $events = $this->eventService->getEventsForUser($request->user());
+            return $this->successResponse(EventResource::collection($events), 'Events retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to fetch events: ' . $e->getMessage(), 500);
+        }
     }
 
+    /**
+     * Store a newly created event.
+     * 
+     * @param StoreEventRequest $request
+     * @return JsonResponse
+     */
     public function store(StoreEventRequest $request): JsonResponse
     {
-        $event = $this->eventService->createEvent($request->validated(), clone $request->user());
-        return $this->successResponse(new EventResource($event), 'Event created successfully', 201);
+        try {
+            $event = $this->eventService->createEvent($request->validated(), $request->user());
+            return $this->successResponse(new EventResource($event->load('school')), 'Event created successfully', 201);
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to create event: ' . $e->getMessage(), 500);
+        }
     }
 
+    /**
+     * Update an existing event.
+     * 
+     * @param UpdateEventRequest $request
+     * @param int|string $id
+     * @return JsonResponse
+     */
     public function update(UpdateEventRequest $request, $id): JsonResponse
     {
-        $event = $this->eventService->updateEvent($id, $request->validated(), $request->user()->user_id);
-        
-        if (!$event) {
-            return $this->errorResponse('Unauthorized or Event not found', 403);
-        }
+        try {
+            $event = $this->eventService->updateEvent($id, $request->validated(), $request->user());
+            
+            if (!$event) {
+                return $this->errorResponse('Unauthorized access or resource not found', 403);
+            }
 
-        return $this->successResponse(new EventResource($event), 'Event updated successfully');
+            return $this->successResponse(new EventResource($event->load('school')), 'Event updated successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to update event: ' . $e->getMessage(), 500);
+        }
     }
 
+    /**
+     * Remove an event from the database.
+     * 
+     * @param Request $request
+     * @param int|string $id
+     * @return JsonResponse
+     */
     public function destroy(Request $request, $id): JsonResponse
     {
-        $userId = optional($request->user())->user_id ?? \App\Models\User::first()->user_id;
+        try {
+            $deleted = $this->eventService->deleteEvent($id, $request->user());
+            
+            if (!$deleted) {
+                return $this->errorResponse('Unauthorized access or resource not found', 403);
+            }
 
-        $deleted = $this->eventService->deleteEvent($id, $userId);
-        
-        if (!$deleted) {
-            return $this->errorResponse('Unauthorized or Event not found', 403);
+            return $this->successResponse(null, 'Event deleted successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to delete event: ' . $e->getMessage(), 500);
         }
-
-        return $this->successResponse(null, 'Event deleted successfully');
     }
 }

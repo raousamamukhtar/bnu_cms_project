@@ -59,4 +59,12 @@ class CarbonService
             return $metric;
         });
     }
+
+    public function deleteMetric(int $id)
+    {
+        return DB::transaction(function () use ($id) {
+            $metric = CarbonMetric::findOrFail($id);
+            return $metric->delete();
+        });
+    }
 }

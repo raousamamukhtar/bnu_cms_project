@@ -15,7 +15,7 @@ class UpdateEventRequest extends FormRequest
             'event_type' => 'sometimes|string|max:255',
             'event_date' => 'sometimes|date',
             'description' => 'sometimes|string',
-            'attachment_path' => 'nullable|string',
+            'event_link' => 'nullable|url|max:500',
         ];
     }
 }

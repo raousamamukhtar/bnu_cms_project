@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class UserSeeder extends Seeder
 {
@@ -21,100 +22,61 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Clear existing users
-        User::query()->delete();
-
         $users = [
-            // Coordinator Dashboard Users (4 coordinators)
-            [
-                'full_name' => 'Coordinator 1 - Computer Science',
-                'email' => 'coordinator1@bnu.edu.pk',
-                'password' => Hash::make('password'),
-                'role_id' => 2, // SCHOOL_COORDINATOR
-                'school_id' => null,
-                'created_at' => now(),
-            ],
-            [
-                'full_name' => 'Coordinator 2 - Engineering',
-                'email' => 'coordinator2@bnu.edu.pk',
-                'password' => Hash::make('password'),
-                'role_id' => 2, // SCHOOL_COORDINATOR
-                'school_id' => null,
-                'created_at' => now(),
-            ],
-            [
-                'full_name' => 'Coordinator 3 - Business',
-                'email' => 'coordinator3@bnu.edu.pk',
-                'password' => Hash::make('password'),
-                'role_id' => 2, // SCHOOL_COORDINATOR
-                'school_id' => null,
-                'created_at' => now(),
-            ],
-            [
-                'full_name' => 'Coordinator 4 - Arts',
-                'email' => 'coordinator4@bnu.edu.pk',
-                'password' => Hash::make('password'),
-                'role_id' => 2, // SCHOOL_COORDINATOR
-                'school_id' => null,
-                'created_at' => now(),
-            ],
-            
-            // HR Manager
-            [
-                'full_name' => 'HR Manager',
-                'email' => 'hr@bnu.edu.pk',
-                'password' => Hash::make('password'),
-                'role_id' => 3, // HR
-                'school_id' => null,
-                'created_at' => now(),
-            ],
-            
-            // Marketing Head
-            [
-                'full_name' => 'Marketing Head',
-                'email' => 'marketing@bnu.edu.pk',
-                'password' => Hash::make('password'),
-                'role_id' => 5, // MARKETING
-                'school_id' => null,
-                'created_at' => now(),
-            ],
-            
-            // Admin User
-            [
-                'full_name' => 'Admin User',
-                'email' => 'admin@bnu.edu.pk',
-                'password' => Hash::make('password'),
-                'role_id' => 1, // SUSTAINABILITY_ADMIN
-                'school_id' => null,
-                'created_at' => now(),
-            ],
-            
-            // Carbon Accountant
-            [
-                'full_name' => 'Carbon Accountant',
-                'email' => 'carbon@bnu.edu.pk',
-                'password' => Hash::make('password'),
-                'role_id' => 6, // CARBON_ACCOUNTANT
-                'school_id' => null,
-                'created_at' => now(),
-            ],
-            
-            // Management User (using STUDENT_AFFAIRS role as closest match)
-            [
-                'full_name' => 'Management User',
-                'email' => 'management@bnu.edu.pk',
-                'password' => Hash::make('password'),
-                'role_id' => 4, // STUDENT_AFFAIRS (repurposed as management)
-                'school_id' => null,
-                'created_at' => now(),
-            ],
+            ['USER_ID'=>100, 'FULL_NAME' => 'System Admin', 'EMAIL' => 'admin@bnu.edu.pk', 'ROLE_ID' => 1],
+            ['USER_ID'=>101, 'FULL_NAME' => 'School Coordinator CS', 'EMAIL' => 'coordinator1@bnu.edu.pk', 'ROLE_ID' => 2],
+            ['USER_ID'=>102, 'FULL_NAME' => 'School Coordinator Engineering', 'EMAIL' => 'coordinator2@bnu.edu.pk', 'ROLE_ID' => 2],
+            ['USER_ID'=>103, 'FULL_NAME' => 'School Coordinator Business', 'EMAIL' => 'coordinator3@bnu.edu.pk', 'ROLE_ID' => 2],
+            ['USER_ID'=>104, 'FULL_NAME' => 'School Coordinator Arts', 'EMAIL' => 'coordinator4@bnu.edu.pk', 'ROLE_ID' => 2],
+            ['USER_ID'=>105, 'FULL_NAME' => 'HR Manager', 'EMAIL' => 'hr@bnu.edu.pk', 'ROLE_ID' => 3],
+            ['USER_ID'=>106, 'FULL_NAME' => 'Marketing Head', 'EMAIL' => 'marketing@bnu.edu.pk', 'ROLE_ID' => 5],
+            ['USER_ID'=>107, 'FULL_NAME' => 'Carbon Accountant', 'EMAIL' => 'carbon@bnu.edu.pk', 'ROLE_ID' => 6],
+            ['USER_ID'=>108, 'FULL_NAME' => 'Management User', 'EMAIL' => 'management@bnu.edu.pk', 'ROLE_ID' => 21],
         ];
 
-        foreach ($users as $userData) {
-            User::create($userData);
+        // Ensure roles 3, 5, 6 exist if they're used. 
+        // Based on my previous output, they were NOT in the ROLES list (1, 2, 4, 21).
+        // Let's add them first just in case.
+        $roles_to_ensure = [
+            ['ROLE_ID' => 3, 'ROLE_NAME' => 'HR'],
+            ['ROLE_ID' => 5, 'ROLE_NAME' => 'Marketing'],
+            ['ROLE_ID' => 6, 'ROLE_NAME' => 'Carbon Accountant'],
+        ];
+
+        foreach ($roles_to_ensure as $r) {
+            try {
+                DB::table('ROLES')->insert($r);
+            } catch (\Exception $e) {}
         }
 
-        $this->command->info('Created 9 users successfully!');
+        $password = Hash::make('password');
+
+        foreach ($users as $u) {
+            try {
+                $existing = DB::table('USERS')->where('EMAIL', $u['EMAIL'])->first();
+                if ($existing) {
+                    DB::table('USERS')->where('EMAIL', $u['EMAIL'])->update([
+                        'FULL_NAME' => $u['FULL_NAME'],
+                        'PASSWORD' => $password,
+                        'ROLE_ID' => $u['ROLE_ID'],
+                        'CREATED_AT' => \Carbon\Carbon::now(),
+                    ]);
+                } else {
+                    DB::table('USERS')->insert([
+                        'USER_ID' => $u['USER_ID'],
+                        'FULL_NAME' => $u['FULL_NAME'],
+                        'EMAIL' => $u['EMAIL'],
+                        'PASSWORD' => $password,
+                        'ROLE_ID' => $u['ROLE_ID'],
+                        'SCHOOL_ID' => null,
+                        'CREATED_AT' => \Carbon\Carbon::now(),
+                    ]);
+                }
+            } catch (\Exception $e) {
+                $this->command->error("Failed to seed {$u['EMAIL']}: " . $e->getMessage());
+            }
+        }
+        $this->command->info('Successfully seeded admin, coordinators and other users!');
         $this->command->info('Default password for all users: password');
     }
 }

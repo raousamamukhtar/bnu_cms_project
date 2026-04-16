@@ -110,3 +110,4 @@
   ⇂ create sequence "SUS_JOBS_ID_SEQ" minvalue 1 start with 1 increment by 1  
   ⇂ create trigger "SUS_JOBS_ID_TRG" before insert on "SUS_JOBS" for each row begin if :new."ID" is null then select "SUS_JOBS_ID_SEQ".nextval into :new."ID" from dual; end if; end;  
 
+   

@@ -22,7 +22,7 @@ class Event extends Model
         'event_type',
         'event_date',
         'description',
-        'attachment_path',
+        'event_link',
         'entered_by',
         'created_at'
     ];
@@ -30,5 +30,10 @@ class Event extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'entered_by', 'user_id');
+    }
+
+    public function school()
+    {
+        return $this->belongsTo(School::class, 'school_id', 'school_id');
     }
 }

@@ -15,7 +15,7 @@ class StoreEventRequest extends FormRequest
             'event_type' => 'required|string|max:255',
             'event_date' => 'required|date',
             'description' => 'required|string',
-            'attachment_path' => 'nullable|string',
+            'event_link' => 'nullable|url|max:500',
             'school_id' => 'nullable|integer',
         ];
     }

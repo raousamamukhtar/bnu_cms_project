@@ -34,4 +34,10 @@ class CarbonController extends Controller
         $metric = $this->carbonService->updateMetric($id, $request->validated());
         return $this->successResponse(new CarbonMetricResource($metric), 'Carbon data updated successfully');
     }
+
+    public function destroy($id): JsonResponse
+    {
+        $this->carbonService->deleteMetric($id);
+        return $this->successResponse(null, 'Carbon data deleted successfully');
+    }
 }

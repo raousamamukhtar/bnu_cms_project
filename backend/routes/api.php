@@ -46,6 +46,7 @@ Route::middleware('auth:sanctum')->prefix('sustainability')->group(function () {
     Route::get('/carbon', [\App\Http\Controllers\Api\CarbonController::class, 'index']);
     Route::post('/carbon', [\App\Http\Controllers\Api\CarbonController::class, 'store']);
     Route::put('/carbon/{id}', [\App\Http\Controllers\Api\CarbonController::class, 'update']);
+    Route::delete('/carbon/{id}', [\App\Http\Controllers\Api\CarbonController::class, 'destroy']);
 });
 
 // Events (Accessible by coordinators, HR, marketing) - Requires Authentication
