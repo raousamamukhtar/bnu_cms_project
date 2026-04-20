@@ -3,13 +3,18 @@ import { Card } from '../../components/ui/Card';
 import { getEvents } from '../../services/eventService';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { Button } from '../../components/ui/Button';
+import { generateEventsReport } from '../../utils/reportExporter';
+import { DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 
 export default function ManagementEventsPage() {
     const [events, setEvents] = useState([]);
+    const [periods, setPeriods] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDepartment, setFilterDepartment] = useState('All');
     const [filterType, setFilterType] = useState('All');
+    const [filterSchool, setFilterSchool] = useState('All');
     const [filterMonth, setFilterMonth] = useState('All');
     const [filterYear, setFilterYear] = useState('All');
 
@@ -20,9 +25,12 @@ export default function ManagementEventsPage() {
     const loadEvents = async () => {
         try {
             setLoading(true);
-            const data = await getEvents();
-            // Ensure data is an array
-            setEvents(Array.isArray(data) ? data : []);
+            const [eventsData, dashboardData] = await Promise.all([
+                getEvents(),
+                import('../../services/reportsService').then(m => m.reportsService.getDashboardData())
+            ]);
+            setEvents(Array.isArray(eventsData) ? eventsData : []);
+            setPeriods(Array.isArray(dashboardData) ? dashboardData : []);
         } catch (error) {
             console.error('Error loading events:', error);
             setEvents([]);
@@ -33,9 +41,24 @@ export default function ManagementEventsPage() {
 
     // Get unique departments/roles from events for filter dropdown
     const departments = useMemo(() => {
-        if (!events.length) return ['All'];
+        if (!events.length) return [{ label: 'All Departments', value: 'All' }];
         const depts = new Set(events.map(event => event.department || 'Unknown'));
-        return ['All', ...Array.from(depts)];
+        const options = Array.from(depts).map(d => ({
+            label: d.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' '),
+            value: d
+        }));
+        return [{ label: 'All Departments', value: 'All' }, ...options];
+    }, [events]);
+
+    // Get unique schools
+    const schools = useMemo(() => {
+        if (!events.length) return [{ label: 'All Schools', value: 'All' }];
+        const schoolList = new Set(events.filter(e => e.school_name).map(event => event.school_name));
+        const options = Array.from(schoolList).map(s => ({
+            label: s,
+            value: s
+        }));
+        return [{ label: 'All Schools', value: 'All' }, ...options];
     }, [events]);
 
     // Get unique event types
@@ -45,24 +68,32 @@ export default function ManagementEventsPage() {
         return ['All', ...Array.from(types)];
     }, [events]);
 
-    // Get unique months 
-    const months = useMemo(() => {
-        if (!events.length) return ['All'];
-        // Assuming event.month is a number 1-12
+    // Get unique years from periods
+    const availableYears = useMemo(() => {
+        if (!periods.length) return ['All'];
+        const y = new Set(periods.map(p => p.period.year.toString()));
+        return ['All', ...Array.from(y).sort((a, b) => b - a)];
+    }, [periods]);
+
+    // Get unique months for the selected year from periods
+    const availableMonths = useMemo(() => {
         const monthNames = [
             'January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'
         ];
-        const eventMonths = new Set(events.map(event => monthNames[event.month - 1]));
-        return ['All', ...Array.from(eventMonths)];
-    }, [events]);
 
-    // Get unique years
-    const years = useMemo(() => {
-        if (!events.length) return ['All'];
-        const eventYears = new Set(events.map(event => event.year.toString()));
-        return ['All', ...Array.from(eventYears).sort((a, b) => b - a)];
-    }, [events]);
+        if (!periods.length) return ['All'];
+        
+        // Filter periods by selected year first
+        const filteredPeriods = filterYear === 'All' 
+            ? periods 
+            : periods.filter(p => p.period.year.toString() === filterYear);
+            
+        const m = new Set(filteredPeriods.map(p => p.period.month));
+        const monthList = Array.from(m).sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b));
+        
+        return ['All', ...monthList];
+    }, [periods, filterYear]);
 
 
     const filteredEvents = useMemo(() => {
@@ -73,6 +104,7 @@ export default function ManagementEventsPage() {
                 (event.submittedBy && event.submittedBy.toLowerCase().includes(searchTerm.toLowerCase()));
 
             const matchesDepartment = filterDepartment === 'All' || (event.department === filterDepartment);
+            const matchesSchool = filterSchool === 'All' || event.school_name === filterSchool;
             const matchesType = filterType === 'All' || event.type === filterType;
 
             const monthNames = [
@@ -83,21 +115,36 @@ export default function ManagementEventsPage() {
             const matchesMonth = filterMonth === 'All' || eventMonthName === filterMonth;
             const matchesYear = filterYear === 'All' || event.year.toString() === filterYear;
 
-            return matchesSearch && matchesDepartment && matchesType && matchesMonth && matchesYear;
+            return matchesSearch && matchesDepartment && matchesSchool && matchesType && matchesMonth && matchesYear;
         });
-    }, [events, searchTerm, filterDepartment, filterType, filterMonth, filterYear]);
+    }, [events, searchTerm, filterDepartment, filterSchool, filterType, filterMonth, filterYear]);
+
+    const handleExport = () => {
+        if (!filteredEvents.length) return;
+        
+        let title = 'Sustainability Events Feed';
+        if (filterDepartment !== 'All') title += ` - ${filterDepartment.replace('_', ' ')}`;
+        if (filterYear !== 'All') title += ` (${filterYear})`;
+        
+        generateEventsReport(filteredEvents, title);
+    };
 
 
     const getDepartmentColor = (dept) => {
+        if (!dept) return 'bg-gray-100 text-gray-700 border-gray-200';
+        const normalizedDept = dept.toUpperCase().replace(/\s+/g, '_');
+        
         const colors = {
             'HR': 'bg-pink-100 text-pink-700 border-pink-200',
             'SCHOOL_COORDINATOR': 'bg-purple-100 text-purple-700 border-purple-200',
+            'COORDINATOR': 'bg-purple-100 text-purple-700 border-purple-200',
             'MARKETING': 'bg-orange-100 text-orange-700 border-orange-200',
             'CARBON_ACCOUNTANT': 'bg-emerald-100 text-emerald-700 border-emerald-200',
             'STUDENT_AFFAIRS': 'bg-blue-100 text-blue-700 border-blue-200',
             'SUSTAINABILITY_ADMIN': 'bg-slate-100 text-slate-700 border-slate-200',
+            'ADMIN': 'bg-slate-100 text-slate-700 border-slate-200',
         };
-        return colors[dept] || 'bg-gray-100 text-gray-700 border-gray-200';
+        return colors[normalizedDept] || 'bg-gray-100 text-gray-700 border-gray-200';
     };
 
     return (
@@ -110,19 +157,30 @@ export default function ManagementEventsPage() {
                         <h1 className="text-2xl font-bold text-slate-900">Events Overview</h1>
                         <p className="text-slate-500">Monitor and track sustainability events across all departments</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-medium text-slate-600 shadow-sm">
-                            Total Events: {events.length}
-                        </span>
-                        <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-medium text-slate-600 shadow-sm">
-                            Filtered: {filteredEvents.length}
-                        </span>
+                    <div className="flex flex-col sm:flex-row items-center gap-3">
+                        <Button
+                            variant="primary"
+                            onClick={handleExport}
+                            disabled={!filteredEvents.length}
+                            className="group flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white border-0 shadow-lg hover:shadow-emerald-500/20 px-6 py-2.5 rounded-xl transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+                        >
+                            <DocumentArrowDownIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                            <span className="font-bold tracking-tight">Generate Event Report</span>
+                        </Button>
+                        <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-medium text-slate-600 shadow-sm">
+                                Total Events: {events.length}
+                            </span>
+                            <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-medium text-slate-600 shadow-sm">
+                                Filtered: {filteredEvents.length}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
                 {/* Filters */}
                 <Card className="p-4 sm:p-6 shadow-sm border border-slate-200/60">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                         <div className="relative">
                             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Search</label>
                             <Input
@@ -137,7 +195,15 @@ export default function ManagementEventsPage() {
                             <Select
                                 value={filterDepartment}
                                 onChange={(e) => setFilterDepartment(e.target.value)}
-                                options={departments.map(d => ({ label: d, value: d }))}
+                                options={departments}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">School</label>
+                            <Select
+                                value={filterSchool}
+                                onChange={(e) => setFilterSchool(e.target.value)}
+                                options={schools}
                             />
                         </div>
                         <div>
@@ -153,7 +219,7 @@ export default function ManagementEventsPage() {
                             <Select
                                 value={filterMonth}
                                 onChange={(e) => setFilterMonth(e.target.value)}
-                                options={months.map(m => ({ label: m, value: m }))}
+                                options={availableMonths.map(m => ({ label: m, value: m }))}
                             />
                         </div>
                         <div>
@@ -161,7 +227,7 @@ export default function ManagementEventsPage() {
                             <Select
                                 value={filterYear}
                                 onChange={(e) => setFilterYear(e.target.value)}
-                                options={years.map(y => ({ label: y, value: y }))}
+                                options={availableYears.map(y => ({ label: y, value: y }))}
                             />
                         </div>
                     </div>
@@ -211,23 +277,31 @@ export default function ManagementEventsPage() {
 
                                     <div className="pt-4 border-t border-slate-100 mt-auto">
                                         <div className="flex items-center justify-between text-xs text-slate-500">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 uppercase">
+                                            <div className="flex items-center gap-1.5 overflow-hidden">
+                                                <span className="shrink-0 w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 uppercase">
                                                     {event.submittedBy.substring(0, 2)}
                                                 </span>
-                                                <span className="font-medium truncate max-w-[100px]">{event.submittedBy}</span>
+                                                <div className="flex flex-col truncate">
+                                                    <span className="font-bold truncate text-slate-700">{event.submittedBy}</span>
+                                                    {event.school_name && <span className="text-[10px] text-emerald-600 font-bold">{event.school_name}</span>}
+                                                </div>
                                             </div>
-                                            <span className="text-slate-400">{event.year}</span>
+                                            <span className="text-slate-400 font-medium">{event.year}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Attachment indicator if exists */}
-                                {event.attachment && (
-                                    <div className="bg-slate-50 px-5 py-2 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500">
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
-                                        <span>Attachment available</span>
-                                    </div>
+                                {event.link && (
+                                    <a 
+                                        href={event.link} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="bg-emerald-50 px-5 py-2.5 border-t border-emerald-100 flex items-center justify-center gap-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                    >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                        <span>Visit Resource Link</span>
+                                    </a>
                                 )}
                             </div>
                         ))}
@@ -242,7 +316,7 @@ export default function ManagementEventsPage() {
                             Try adjusting your search or filters to find what you're looking for.
                         </p>
                         <button
-                            onClick={() => { setSearchTerm(''); setFilterDepartment('All'); setFilterType('All'); setFilterMonth('All'); setFilterYear('All'); }}
+                            onClick={() => { setSearchTerm(''); setFilterDepartment('All'); setFilterSchool('All'); setFilterType('All'); setFilterMonth('All'); setFilterYear('All'); }}
                             className="mt-4 text-sm font-medium text-emerald-600 hover:text-emerald-700"
                         >
                             Clear all filters

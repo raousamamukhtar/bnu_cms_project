@@ -14,11 +14,23 @@ export function transformMonthlyDataForChart(monthlyData) {
     'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
   };
 
-  return [...monthlyData]
-    .sort((a, b) => (monthOrder[a.period.month] || 0) - (monthOrder[b.period.month] || 0))
+  // Sort by Year (Descending) then by Month (Descending) to get latest first
+  const sorted = [...monthlyData].sort((a, b) => {
+    if (a.period.year !== b.period.year) {
+      return b.period.year - a.period.year;
+    }
+    return (monthOrder[b.period.month] || 0) - (monthOrder[a.period.month] || 0);
+  });
+
+  // Take the 12 most recent months
+  const latest12 = sorted.slice(0, 12);
+
+  // Return them in chronological order (Ascending) for the chart
+  return latest12
+    .reverse()
     .map((entry) => ({
-      month: entry.period.month.substring(0, 3),
-      fullMonth: entry.period.month,
+      month: `${entry.period.month.substring(0, 3)} ${entry.period.year.toString().slice(-2)}`,
+      fullMonth: `${entry.period.month} ${entry.period.year}`,
       paper: entry.paper?.reams || 0,
       electricity: entry.electricity?.units || 0,
       water: entry.water?.units || 0,

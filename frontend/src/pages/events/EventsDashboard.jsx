@@ -222,6 +222,7 @@ export default function EventsDashboard() {
                                         <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Date</th>
                                         <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Period</th>
                                         <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Description</th>
+                                        <th className="text-left py-3 px-4 text-xs font-semibold text-slate-700 uppercase tracking-wider">Link</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200">
@@ -241,6 +242,20 @@ export default function EventsDashboard() {
                                             </td>
                                             <td className="py-3 px-4 text-sm text-slate-500 italic max-w-xs truncate">
                                                 {event.description || 'No description'}
+                                            </td>
+                                            <td className="py-3 px-4 text-sm font-medium">
+                                                {event.link ? (
+                                                    <a 
+                                                        href={event.link} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer" 
+                                                        className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 flex-nowrap"
+                                                    >
+                                                        🔗 <span className="underline">View</span>
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-slate-400 text-xs">N/A</span>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}

@@ -123,7 +123,8 @@ return [
             'username' => env('DB_USERNAME', 'USAMA'),
             'password' => env('DB_PASSWORD', 'usama123'),
             'charset' => env('DB_CHARSET', 'AL32UTF8'),
-            'prefix' => 'SUS_',
+            'prefix' => env('DB_SCHEMA_PREFIX', ''),
+            'schema' => env('DB_SCHEMA', ''),
             'prefix_indexes' => true,
             'options' => [
                 PDO::ATTR_CASE => PDO::CASE_LOWER,

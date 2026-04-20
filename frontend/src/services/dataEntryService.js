@@ -89,7 +89,7 @@ export const saveStepData = async (year, month, stepData, stepId) => {
         data_year: parseInt(year)
       };
       const periodResponse = await apiClient.post(stepEndpoints[1], payload);
-      const periodId = periodResponse.data?.data?.period_id;
+      const periodId = periodResponse.data?.period_id;
 
       const stepPayload = transformPayload(stepId, stepData, periodId);
       const response = await apiClient.post(stepEndpoints[stepId], stepPayload);
@@ -217,32 +217,26 @@ export const checkIfEntryExists = async (year, month) => {
 };
 
 export const loadSubmissionStatus = (year, month) => {
-  // For UI state, we can still use local storage to track what user "submitted" in this session,
-  // OR we can infer it from data presence.
-  // For robust "Database Only", we should fetch it.
-  // But `loadSubmissionStatus` is synchronous in current usage.
-  // To fix this fully, we'd need to async-ify the component usage.
-  // OPTION: We can't change component easily. 
-  // TRICK: We will return localStorage state for "session" progress, 
-  // but the actual data is always from DB.
-
-  // However, if we reload page, we lose status.
-  // Ideally, we load status from DB.
-  // Since we are "Removing file", let's make it smarter:
-  // We can't make this async without refactoring React components heavily.
-  // Compromise: We keep using localStorage for *UI tab completion status* (blue checks),
-  // but data is safely in DB.
-
-  // No localStorage - data saved to database
-  return {};
+  const key = `submission_status_${year}_${month}`;
+  const raw = localStorage.getItem(key);
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
 };
 
 export const saveSubmissionStatus = (year, month, stepId, submitted) => {
-  // No-op - data saved via API
+  const key = `submission_status_${year}_${month}`;
+  const status = loadSubmissionStatus(year, month);
+  status[stepId] = submitted;
+  localStorage.setItem(key, JSON.stringify(status));
 };
 
 export const areAllStepsCompleted = (year, month, totalSteps = 6) => {
   const status = loadSubmissionStatus(year, month);
+  // Basic info (Step 1) is always required and usually considered "done" once we're on the page with month/year
+  // But strictly, we check if all steps 1 to totalSteps are true in status
   for (let i = 1; i <= totalSteps; i++) {
     if (!status[i]) return false;
   }

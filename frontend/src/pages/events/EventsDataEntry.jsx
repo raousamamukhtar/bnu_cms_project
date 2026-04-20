@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -87,7 +87,7 @@ export default function EventsDataEntry() {
     });
 
     const [events, setEvents] = useState([
-        { name: '', type: '', date: '', description: '', attachment: null, attachmentName: '' },
+        { name: '', type: '', date: '', description: '', link: '' },
     ]);
 
     const months = [
@@ -95,37 +95,54 @@ export default function EventsDataEntry() {
         'July', 'August', 'September', 'October', 'November', 'December',
     ];
 
+    // Effect to clear dates if they fall outside the selected period
+    useEffect(() => {
+        if (formData.year && formData.month) {
+            const monthIdx = months.indexOf(formData.month);
+            if (monthIdx === -1) return;
+            
+            const min = `${formData.year}-${String(monthIdx + 1).padStart(2, '0')}-01`;
+            const lastDay = new Date(formData.year, monthIdx + 1, 0).getDate();
+            const max = `${formData.year}-${String(monthIdx + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+            
+            setEvents(prev => prev.map(event => {
+                if (event.date && (event.date < min || event.date > max)) {
+                    return { ...event, date: '' };
+                }
+                return event;
+            }));
+        }
+    }, [formData.month, formData.year]);
+
     const handleEventChange = (index, field, value) => {
         const updatedEvents = [...events];
         updatedEvents[index][field] = value;
         setEvents(updatedEvents);
     };
 
-    const handleAttachmentChange = (index, e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const updatedEvents = [...events];
-            updatedEvents[index].attachment = file;
-            updatedEvents[index].attachmentName = file.name;
-            setEvents(updatedEvents);
-        }
-    };
 
-    const handleRemoveAttachment = (index) => {
-        const updatedEvents = [...events];
-        updatedEvents[index].attachment = null;
-        updatedEvents[index].attachmentName = '';
-        setEvents(updatedEvents);
+
+    const cleanUrl = (url) => {
+        if (!url || url.trim() === '') return null;
+        const trimmed = url.trim();
+        if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+            return `https://${trimmed}`;
+        }
+        return trimmed;
     };
 
     const handleAddEvent = () => {
-        setEvents([...events, { name: '', type: '', date: '', description: '', attachment: null, attachmentName: '' }]);
+        setEvents([...events, { name: '', type: '', date: '', description: '', link: '' }]);
     };
 
     const handleRemoveEvent = (index) => {
         if (events.length > 1) {
             const updatedEvents = events.filter((_, i) => i !== index);
             setEvents(updatedEvents);
+        } else {
+            // Reset the single record to initial state
+            setEvents([{ name: '', type: '', date: '', description: '', link: '' }]);
+            addToast('Record cleared', 'info');
         }
     };
 
@@ -162,7 +179,7 @@ export default function EventsDataEntry() {
                     event_type: event.type,
                     event_date: event.date,
                     description: event.description,
-                    attachment_path: event.attachmentName || null,
+                    event_link: cleanUrl(event.link),
                     school_id: user.role === 'coordinator' ? user.school_id : null,
                 })
             );
@@ -170,7 +187,7 @@ export default function EventsDataEntry() {
             await Promise.all(savePromises);
             addToast(`Successfully saved ${validEvents.length} record(s)!`, 'success');
 
-            setEvents([{ name: '', type: '', date: '', description: '', attachment: null, attachmentName: '' }]);
+            setEvents([{ name: '', type: '', date: '', description: '', link: '' }]);
             setFormData({
                 month: '',
                 year: getDefaultYear(),
@@ -243,15 +260,17 @@ export default function EventsDataEntry() {
 
                             {events.map((event, index) => (
                                 <div key={index} className="border border-slate-200 rounded-lg p-5 bg-white relative">
-                                    {events.length > 1 && (
+                                    <div className="absolute top-4 right-4 print:hidden">
                                         <button
                                             type="button"
                                             onClick={() => handleRemoveEvent(index)}
-                                            className="absolute top-2 right-2 text-slate-400 hover:text-red-500 transition-colors"
+                                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-red-600 transition-colors py-1 px-2 rounded-md hover:bg-red-50"
+                                            title="Delete this record"
                                         >
-                                            ✕
+                                            <span className="text-base">✕</span>
+                                            Delete Record
                                         </button>
-                                    )}
+                                    </div>
                                     <h4 className="text-sm font-semibold text-slate-700 mb-4">Record #{index + 1}</h4>
                                     <div className="space-y-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -283,6 +302,9 @@ export default function EventsDataEntry() {
                                                     value={event.date}
                                                     onChange={(e) => handleEventChange(index, 'date', e.target.value)}
                                                     required
+                                                    min={formData.year && formData.month ? `${formData.year}-${String(months.indexOf(formData.month) + 1).padStart(2, '0')}-01` : (formData.year ? `${formData.year}-01-01` : undefined)}
+                                                    max={formData.year && formData.month ? `${formData.year}-${String(months.indexOf(formData.month) + 1).padStart(2, '0')}-${new Date(formData.year, months.indexOf(formData.month) + 1, 0).getDate()}` : (formData.year ? `${formData.year}-12-31` : undefined)}
+                                                    disabled={!formData.year}
                                                 />
                                             </div>
                                         </div>
@@ -298,19 +320,13 @@ export default function EventsDataEntry() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-2">Attachment (Optional)</label>
-                                            <div className="flex items-center gap-3">
-                                                <label className="cursor-pointer">
-                                                    <input type="file" onChange={(e) => handleAttachmentChange(index, e)} className="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
-                                                    <span className="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">📎 Choose File</span>
-                                                </label>
-                                                {event.attachmentName && (
-                                                    <div className="flex items-center gap-2 flex-1">
-                                                        <span className="text-sm text-slate-600 truncate">{event.attachmentName}</span>
-                                                        <button type="button" onClick={() => handleRemoveAttachment(index)} className="text-red-600 hover:text-red-700 text-sm font-medium">✕</button>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-2">Event Link (Optional)</label>
+                                            <Input
+                                                type="url"
+                                                value={event.link}
+                                                onChange={(e) => handleEventChange(index, 'link', e.target.value)}
+                                                placeholder="https://example.com/event-details"
+                                            />
                                         </div>
                                     </div>
                                 </div>

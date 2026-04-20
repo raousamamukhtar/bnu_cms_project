@@ -36,7 +36,7 @@ apiClient.interceptors.response.use(
   (error) => {
     if (IS_DEMO_MODE) {
       return Promise.reject(
-        new Error('Demo mode: API server not configured. Using local data only.')
+        new Error('')
       );
     }
     return Promise.reject(error);
@@ -45,7 +45,7 @@ apiClient.interceptors.response.use(
 
 export const pingServer = async () => {
   if (IS_DEMO_MODE) {
-    return Promise.resolve({ status: 'demo', message: 'Running in demo mode' });
+    return Promise.resolve({ status: 'demo', message: '' });
   }
 
   try {

@@ -9,7 +9,7 @@ import { Input } from '../../components/ui/Input';
 import { useUI } from '../../context/UIContext';
 import { useAuth } from '../../context/AuthContext';
 import { getYearOptions, getDefaultYear, formatDate } from '../../utils/formatters';
-import { getEvents, updateEvent, getMonthName } from '../../services/eventService';
+import { getEvents, updateEvent, deleteEvent, getMonthName } from '../../services/eventService';
 
 const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -33,6 +33,7 @@ export default function EventsHistory() {
     const [editingEntry, setEditingEntry] = useState(null);
     const [editFormData, setEditFormData] = useState({});
     const [updateLoading, setUpdateLoading] = useState(false);
+    const [urlError, setUrlError] = useState('');
 
     const role = user?.role_name || '';
     const myDept = user?.department || 'Department';
@@ -112,7 +113,10 @@ export default function EventsHistory() {
                 type: event.type,
                 date: event.date,
                 description: event.description,
-                attachmentName: event.attachment,
+                link: event.link,
+                entered_by: event.entered_by,
+                school_id: event.school_id,
+                role_id: event.submitter_role_id,
             }));
 
             setEntries(transformedEntries);
@@ -138,20 +142,47 @@ export default function EventsHistory() {
             type: entry.type || '',
             date: entry.date || '',
             description: entry.description || '',
+            link: entry.link || '',
         });
+        setUrlError('');
         setModalOpen(true);
+    };
+
+    const cleanUrl = (url) => {
+        if (!url || url.trim() === '') return null;
+        const trimmed = url.trim();
+        
+        // Simple regex for basic validation
+        const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+        if (!urlPattern.test(trimmed)) {
+            return null;
+        }
+
+        if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+            return `https://${trimmed}`;
+        }
+        return trimmed;
     };
 
     const handleUpdate = async () => {
         try {
             setUpdateLoading(true);
+            setUrlError('');
             if (!editingEntry) return;
+
+            const cleanedLink = cleanUrl(editFormData.link);
+            if (editFormData.link && editFormData.link.trim() !== '' && !cleanedLink) {
+                setUrlError('Please enter a valid URL');
+                setUpdateLoading(false);
+                return;
+            }
 
             await updateEvent(editingEntry.id, {
                 event_name: editFormData.name,
                 event_type: editFormData.type,
                 event_date: editFormData.date,
                 description: editFormData.description,
+                event_link: cleanUrl(editFormData.link),
             });
 
             addToast(`Record updated successfully!`, 'success');
@@ -164,7 +195,23 @@ export default function EventsHistory() {
             setUpdateLoading(false);
         }
     };
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this record? This action cannot be undone.')) {
+            return;
+        }
 
+        try {
+            setLoading(true);
+            await deleteEvent(id);
+            addToast('Record deleted successfully!', 'success');
+            await loadEntries();
+        } catch (error) {
+            console.error('Delete failed:', error);
+            addToast('Failed to delete record', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
     const columns = [
         {
             header: 'Period',
@@ -190,8 +237,20 @@ export default function EventsHistory() {
             header: 'Description',
             accessor: 'description',
             cell: (row) => (
-                <div className="text-sm text-slate-600 max-w-xs truncate" title={row.description}>
-                    {row.description}
+                <div>
+                    <div className="text-sm text-slate-600 max-w-xs truncate" title={row.description}>
+                        {row.description}
+                    </div>
+                    {row.link && (
+                        <a 
+                            href={row.link} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 mt-1"
+                        >
+                            🔗 View Resource
+                        </a>
+                    )}
                 </div>
             ),
         },
@@ -199,14 +258,32 @@ export default function EventsHistory() {
             header: 'Actions',
             accessor: 'actions',
             cell: (row) => (
-                <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => handleEdit(row)}
-                    className="text-xs"
-                >
-                    Edit
-                </Button>
+                <div className="flex gap-2">
+                    {(user?.user_id == row.entered_by || 
+                      user?.role_id == 1 || 
+                      user?.role_id == 21 || 
+                      (user?.school_id && user?.school_id == row.school_id) || 
+                      (!user?.school_id && user?.role_id == row.role_id)) && (
+                        <div className="flex gap-2">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => handleEdit(row)}
+                                className="text-xs"
+                            >
+                                Edit
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="danger"
+                                onClick={() => handleDelete(row.id)}
+                                className="text-xs bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
+                            >
+                                Delete
+                            </Button>
+                        </div>
+                    )}
+                </div>
             ),
         },
     ];
@@ -293,6 +370,12 @@ export default function EventsHistory() {
                 title={`Edit Record - ${editingEntry?.month} ${editingEntry?.year}`}
             >
                 <div className="space-y-4 px-1">
+                    {urlError && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-3 mb-4">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            <span className="text-sm font-semibold">{urlError}</span>
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">{config.labels.eventName} <span className="text-red-500">*</span></label>
@@ -333,6 +416,20 @@ export default function EventsHistory() {
                             required
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none text-slate-900 placeholder:text-slate-400"
                         />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Event Link (Optional)</label>
+                        <Input
+                            type="url"
+                            value={editFormData.link}
+                            onChange={(e) => {
+                                setEditFormData(prev => ({ ...prev, link: e.target.value }));
+                                setUrlError('');
+                            }}
+                            placeholder="https://example.com/details"
+                            className={urlError ? 'border-red-500' : ''}
+                        />
+                        {urlError && <p className="text-red-500 text-xs mt-1 font-medium">{urlError}</p>}
                     </div>
                 </div>
 

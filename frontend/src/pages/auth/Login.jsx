@@ -97,7 +97,7 @@ export default function Login() {
             <p className="text-xs text-red-500 text-center">{errors.email}</p>
           )}
           <p className="text-xs text-slate-400 text-center">
-            Demo mode: any password works. Data auto-refreshes for sandbox use.
+            Demo mode: password
           </p>
         </form>
       </div>

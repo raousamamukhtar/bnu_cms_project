@@ -18,6 +18,7 @@ import { Button } from '../../components/ui/Button';
 import { formatNumber, getYearOptions, getDefaultYear } from '../../utils/formatters';
 import { useNavigate } from 'react-router-dom';
 import { getAllSubmittedEntries } from '../../services/dataEntryService';
+import { getEvents } from '../../services/eventService';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -155,20 +156,32 @@ export default function AdminDashboard() {
     ];
   }, [filteredEntries]);
 
-  // Prepare chart data
+  // Prepare chart data (always latest 12 months across years)
   const chartData = useMemo(() => {
-    return filteredEntries
-      .slice()
+    const monthOrder = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    // Get all entries, sort by year and month (newest first)
+    const allSorted = [...monthlyEntries].sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return monthOrder.indexOf(b.month) - monthOrder.indexOf(a.month);
+    });
+
+    // Take top 12 and reverse for chronological display
+    return allSorted
+      .slice(0, 12)
       .reverse()
       .map((entry) => ({
-        month: entry.month,
+        month: `${entry.month.substring(0, 3)} ${entry.year.toString().slice(-2)}`,
         user: entry.userName,
         electricity: entry.electricityUnits || 0,
         water: entry.waterUnits || 0,
         waste: (entry.wasteOrganic || 0) + (entry.wasteRecyclables || 0) + (entry.wasteOthers || 0),
         fuel: entry.generatorFuelLitres || 0,
       }));
-  }, [filteredEntries]);
+  }, [monthlyEntries]);
 
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">

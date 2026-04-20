@@ -267,3 +267,75 @@ export const generateExcel = (data, title, type = 'monthly', monthlyBreakdown = 
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     saveAs(new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `BNU_${title.replace(/\s+/g, '_')}.xlsx`);
 };
+
+/**
+ * Generate Events Specific PDF Report
+ */
+export const generateEventsReport = (events, title = 'Sustainability Events Report') => {
+    const doc = new jsPDF();
+    
+    // Cover Page
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    doc.setFillColor(240, 253, 244);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+    
+    doc.setFontSize(28);
+    doc.setTextColor(...COLORS.emerald);
+    doc.text('Sustainability Events Feed', pageWidth / 2, 80, { align: 'center' });
+    
+    doc.setFontSize(20);
+    doc.setTextColor(...COLORS.slate600);
+    doc.text(title, pageWidth / 2, 100, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.setTextColor(...COLORS.slate500);
+    doc.text(`Total Records: ${events.length}`, pageWidth / 2, 115, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.text('Beaconhouse National University', pageWidth / 2, 200, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, 210, { align: 'center' });
+    
+    doc.addPage();
+
+    // Summary Section
+    doc.setFontSize(18);
+    doc.setTextColor(...COLORS.emerald);
+    doc.text('Events Summary', 14, 20);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(...COLORS.slate600);
+    const summary = `This report contains a detailed log of ${events.length} sustainability-related activities, awareness campaigns, and departmental events recorded within the system. The feed includes data from various school coordinators and departments including HR, Marketing, and Student Affairs.`;
+    doc.text(doc.splitTextToSize(summary, 180), 14, 30);
+
+    // Table Data
+    const head = [['Date', 'Event Name', 'Type', 'Department', 'Submitted By', 'Resource Link']];
+    const body = events.map(e => [
+        new Date(e.date).toLocaleDateString(),
+        e.name,
+        e.type,
+        e.department.replace('_', ' '),
+        e.submittedBy,
+        e.link || 'N/A'
+    ]);
+
+    autoTable(doc, {
+        startY: 50,
+        head,
+        body,
+        theme: 'grid',
+        headStyles: { fillColor: COLORS.headerFill, textColor: 255, fontSize: 9 },
+        styles: { fontSize: 8, cellPadding: 3, lineColor: [226, 232, 240], lineWidth: 0.1 },
+        alternateRowStyles: { fillColor: COLORS.slate100 },
+        margin: { top: 20 },
+        didDrawPage: (data) => {
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(`Page ${doc.internal.getNumberOfPages()} - BNU Events Report`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        }
+    });
+
+    const fileName = `BNU_Events_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+};

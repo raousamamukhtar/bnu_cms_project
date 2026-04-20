@@ -227,6 +227,7 @@ CREATE TABLE events (
     event_id NUMBER PRIMARY KEY,
     event_name VARCHAR2(255) NOT NULL,
     event_date DATE NOT NULL,
+    event_link VARCHAR2(500),
     participants NUMBER,
     school_id NUMBER NOT NULL,
     entered_by NUMBER NOT NULL,
@@ -440,6 +441,9 @@ March 2025 → April 2025
 - Comparative analysis
 - Export functionality
 - **Yearly Aggregation:** Automatically calculates annual totals for consumptions and averages for scores (AQI).
+- **Smart Event Audit**: Management can filter all university activities by **Department**, **School (SLASS/SCIT)**, and **Reporting Period**.
+- **Real-time Live Feed**: Searchable event stream with direct access to documentation links.
+- **Report Generation**: PDF/Excel exports that now include the "Resource Link" column for all events.
 
 ---
 
@@ -501,10 +505,10 @@ March 2025 → April 2025
 - Handles year rollover
 - Resets form automatically
 
-### 6. Edit Restrictions
-- Only last month editable
-- Prevents data tampering
-- Maintains data integrity
+### 6. Dynamic Data Management
+- **Carbon Data**: Fully editable/deletable by authorized accountants to ensure audit accuracy.
+- **Events**: Documentation is stored via **Resource Links** (URLs), allowing for easy cloud-based verification without server storage overhead.
+- **Admin Consumption**: Month-old entries are locked to maintain permanent monthly records.
 
 ### 7. API Security (Sanctum)
 - All sustainability routes protected by `auth:sanctum`.

@@ -38,31 +38,7 @@ const getAllCarbonAccountantEntries = async () => {
   }
 };
 
-/**
- * Check if an entry can be edited (current month or previous month only)
- * @param {string} year - Year (e.g., "2025")
- * @param {string} month - Month (e.g., "January")
- * @returns {boolean} True if the entry can be edited
- */
-const canEditEntry = (year, month) => {
-  const now = new Date();
-  const currentYear = now.getFullYear().toString();
-  const currentMonthIndex = now.getMonth(); // 0-based (0 = January)
-  const currentMonth = months[currentMonthIndex];
 
-  // Calculate previous month
-  const previousMonthIndex = currentMonthIndex === 0 ? 11 : currentMonthIndex - 1;
-  const previousMonth = months[previousMonthIndex];
-  const previousYear = currentMonthIndex === 0
-    ? (now.getFullYear() - 1).toString()
-    : currentYear;
-
-  // Can edit current month or previous month only
-  return (
-    (year === currentYear && month === currentMonth) ||
-    (year === previousYear && month === previousMonth)
-  );
-};
 
 export default function CarbonAccountantHistory() {
   const { addToast } = useUI();
@@ -94,10 +70,6 @@ export default function CarbonAccountantHistory() {
   };
 
   const handleEdit = (entry) => {
-    if (!canEditEntry(entry.year, entry.month)) {
-      addToast('Cannot edit entries older than one month', 'error');
-      return;
-    }
 
     setEditingEntry(entry);
     setEditFormData({
@@ -126,6 +98,24 @@ export default function CarbonAccountantHistory() {
       addToast("Failed to update entry", "error");
     } finally {
       setUpdateLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this record? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await carbonService.deleteCarbonEntry(id);
+      addToast('Record deleted successfully!', 'success');
+      await loadEntries();
+    } catch (error) {
+      console.error('Delete failed:', error);
+      addToast('Failed to delete record', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -191,9 +181,8 @@ export default function CarbonAccountantHistory() {
     {
       header: 'Actions',
       accessor: 'actions',
-      cell: (row) => {
-        const editable = canEditEntry(row.year, row.month);
-        return editable ? (
+      cell: (row) => (
+        <div className="flex gap-2">
           <Button
             type="button"
             variant="secondary"
@@ -202,10 +191,16 @@ export default function CarbonAccountantHistory() {
           >
             Edit
           </Button>
-        ) : (
-          <span className="text-xs text-slate-400 italic">Locked</span>
-        );
-      },
+          <Button
+            type="button"
+            variant="danger"
+            onClick={() => handleDelete(row.id)}
+            className="text-xs bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
+          >
+            Delete
+          </Button>
+        </div>
+      ),
     },
   ];
 

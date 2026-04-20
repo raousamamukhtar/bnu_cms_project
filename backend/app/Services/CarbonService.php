@@ -8,20 +8,36 @@ use Illuminate\Support\Facades\DB;
 
 class CarbonService
 {
+    /**
+     * Retrieve all carbon metrics with their associated sustainability periods.
+     * Sorted chronologically (Year desc, then Month desc).
+     * 
+     * @return \Illuminate\Support\Collection
+     */
     public function getAll()
     {
         return CarbonMetric::with('period')
             ->get()
-            ->sortByDesc(fn ($metric) => $metric->period->data_year)
-            ->sortByDesc(fn ($metric) => $metric->period->data_month)
+            ->sortByDesc(fn ($metric) => $metric->period?->data_year)
+            ->sortByDesc(fn ($metric) => $metric->period?->data_month)
             ->values();
     }
 
-    public function createOrUpdateMetric(array $data, int $userId)
+    /**
+     * Create or update a carbon metric for a specific month/year.
+     * Automatically handles the lookup/creation of the underlying SustainabilityPeriod.
+     * 
+     * @param array $data Contains 'month' (string), 'year', 'aqi', 'carbonFootprint'
+     * @param int $userId ID of the user performing the action
+     * @return CarbonMetric
+     */
+    public function createOrUpdateMetric(array $data, int $userId): CarbonMetric
     {
         return DB::transaction(function () use ($data, $userId) {
+            // Convert month name to numeric (e.g. "January" -> 1)
             $monthNumber = date('n', strtotime($data['month']));
 
+            // Ensure a parent period exists for this data
             $period = SustainabilityPeriod::firstOrCreate(
                 [
                     'data_month' => $monthNumber,
@@ -35,6 +51,7 @@ class CarbonService
                 ]
             );
 
+            // Create or update the specific carbon metrics for that period
             return CarbonMetric::updateOrCreate(
                 ['period_id' => $period->period_id],
                 [
@@ -47,7 +64,14 @@ class CarbonService
         });
     }
 
-    public function updateMetric(int $id, array $data)
+    /**
+     * Update an existing carbon metric by ID.
+     * 
+     * @param int $id
+     * @param array $data Updated metrics
+     * @return CarbonMetric
+     */
+    public function updateMetric(int $id, array $data): CarbonMetric
     {
         return DB::transaction(function () use ($id, $data) {
             $metric = CarbonMetric::findOrFail($id);
@@ -60,6 +84,12 @@ class CarbonService
         });
     }
 
+    /**
+     * Permanently delete a carbon metric record.
+     * 
+     * @param int $id
+     * @return bool|null
+     */
     public function deleteMetric(int $id)
     {
         return DB::transaction(function () use ($id) {

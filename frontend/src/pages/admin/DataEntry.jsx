@@ -29,6 +29,7 @@ export default function DataEntry() {
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submittedMonthYear, setSubmittedMonthYear] = useState('');
+  const [isUnlocked, setIsUnlocked] = useState(false);
 
   const editYear = searchParams.get('year');
   const editMonth = searchParams.get('month');
@@ -55,6 +56,11 @@ export default function DataEntry() {
     }
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
+
+  // Reset unlocked state when period changes
+  useEffect(() => {
+    setIsUnlocked(false);
+  }, [formData.month, formData.year]);
 
   const allStepsCompleted = areAllStepsCompleted(
     formData.year,
@@ -225,12 +231,27 @@ export default function DataEntry() {
                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <div className="ml-3">
+                <div className="ml-3 flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <p className="text-sm text-amber-700">
                     Data for <strong>{formData.month} {formData.year}</strong> already exists.
                     <br />
                     You are editing an existing submission or draft.
                   </p>
+                  {!isUnlocked && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setIsUnlocked(true)}
+                      className="bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-200 font-bold py-1 px-4 text-xs h-auto"
+                    >
+                      🔓 Unlock for Edit
+                    </Button>
+                  )}
+                  {isUnlocked && (
+                   <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded">
+                     ✓ Panel Unlocked
+                   </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -257,7 +278,7 @@ export default function DataEntry() {
                 handlePeriodChangeError,
                 allStepsCompleted,
                 isEditMode,
-                false // Never lock fields, allow editing always
+                isExistingEntry && !isEditMode && !isUnlocked // Lock fields if existing entry and not unlocked
               )}
             </div>
 
@@ -290,7 +311,7 @@ export default function DataEntry() {
                     isCurrentTabSubmitted ? 'bg-blue-600 hover:bg-blue-700' : ''
                   }
                   loading={submitting}
-                  disabled={submitting}
+                  disabled={submitting || (isExistingEntry && !isEditMode && !isUnlocked)}
                 >
                   {isExistingEntry ? `Update ${DATA_ENTRY_TABS.find((t) => t.id === currentTab)?.title || 'Tab'}` : `Submit ${DATA_ENTRY_TABS.find((t) => t.id === currentTab)?.title || 'Tab'}`}
                 </Button>

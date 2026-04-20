@@ -130,6 +130,11 @@ Managing AQI and Carbon Footprint data.
 *   **Endpoint:** `PUT /sustainability/carbon/{id}`
 *   **Request Body:** `{"aqi": 155, "carbonFootprint": 26.0}`
 
+### Delete Carbon Metric
+*   **Endpoint:** `DELETE /sustainability/carbon/{id}`
+*   **Description:** Permanently removes a carbon metric entry.
+*   **Authentication:** Required
+
 ---
 
 ## 5. Events Management
@@ -152,7 +157,7 @@ Endpoints for HR, Marketing, and Student Affairs to manage sustainability-relate
       "event_type": "Workshop",
       "event_date": "2026-02-15",
       "description": "...",
-      "attachment_path": "optional/path/to/file.pdf"
+      "event_link": "https://example.com/report"
     }
     ```
 

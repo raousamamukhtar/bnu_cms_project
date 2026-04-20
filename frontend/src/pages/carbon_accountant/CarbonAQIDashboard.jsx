@@ -32,17 +32,29 @@ export default function CarbonAQIDashboard() {
         const data = await carbonService.getCarbonData();
 
         // Transform API response to match expected format
+        const monthOrder = {
+          'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
+          'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
+        };
+
         const transformedData = data.map(entry => ({
           month: entry.month,
-          monthAbbr: entry.month.substring(0, 3),
+          monthAbbr: `${entry.month.substring(0, 3)} ${entry.year.toString().slice(-2)}`,
           year: entry.year,
           aqi: parseFloat(entry.aqi) || 0,
           carbonFootprint: parseFloat(entry.carbonFootprint) || 0,
-          pm25: 0, // Not in current schema
-          pm10: 0, // Not in current schema
+          pm25: 0, 
+          pm10: 0, 
         }));
 
-        setEntries(transformedData);
+        // Sort by Year/Month Descending to get latest 12
+        const sorted = [...transformedData].sort((a, b) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return (monthOrder[b.month] || 0) - (monthOrder[a.month] || 0);
+        });
+
+        // Take latest 12 and reverse for chronological display
+        setEntries(sorted.slice(0, 12).reverse());
       } catch (error) {
         console.error('Error loading carbon accountant data:', error);
         setEntries([]);

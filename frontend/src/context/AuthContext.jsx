@@ -8,16 +8,32 @@ const STORAGE_KEY = 'sdms_auth';
 
 // Map role names from backend to frontend routes
 const ROLE_REDIRECT = {
+  // Database role names (Handle both spaces and underscores for production/local compatibility)
+  'Admin': '/admin/dashboard',
   'SUSTAINABILITY_ADMIN': '/admin/dashboard',
+  'School Coordinator': '/coordinator/dashboard',
   'SCHOOL_COORDINATOR': '/coordinator/dashboard',
   'HR': '/hr/dashboard',
+  'Marketing': '/marketing/dashboard',
   'MARKETING': '/marketing/dashboard',
+  'Student Affairs': '/student-affairs/dashboard',
   'STUDENT_AFFAIRS': '/student-affairs/dashboard',
+  'Management': '/management/dashboard',
   'MANAGEMENT': '/management/dashboard',
+  'Carbon Accountant': '/carbon-accountant/dashboard',
   'CARBON_ACCOUNTANT': '/carbon-accountant/dashboard',
+
+  // Fallback slug mappings
+  'admin': '/admin/dashboard',
+  'coordinator': '/coordinator/dashboard',
+  'hr': '/hr/dashboard',
+  'marketing': '/marketing/dashboard',
+  'student_affairs': '/student-affairs/dashboard',
+  'management': '/management/dashboard',
+  'carbon_accountant': '/carbon-accountant/dashboard',
 };
 
-// Map role IDs to role names for compatibility
+// Map role IDs to role slugs (used for local state and AppRoutes)
 const ROLE_ID_TO_NAME = {
   1: 'admin',
   2: 'coordinator',
@@ -75,8 +91,16 @@ export function AuthProvider({ children }) {
       // Set auth token for API requests
       setAuthToken(authUser.token);
 
-      // Determine redirect path based on role name from backend
-      const redirectPath = ROLE_REDIRECT[data.user.role?.role_name] || '/coordinator/dashboard';
+      // Determine redirect path based on role name or ID mapping
+      const roleName = data.user.role?.role_name;
+      const roleKey = Object.keys(ROLE_REDIRECT).find(
+        (key) => key.toLowerCase() === roleName?.toLowerCase()
+      );
+
+      const redirectPath = roleKey 
+        ? ROLE_REDIRECT[roleKey]
+        : (ROLE_REDIRECT[ROLE_ID_TO_NAME[parseInt(data.user.role_id)]] || '/coordinator/dashboard');
+      
       return redirectPath;
     } catch (error) {
       throw new Error(error.message || 'Failed to authenticate. Please try again.');
